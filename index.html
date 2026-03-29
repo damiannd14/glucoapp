@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlucoApp</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="GlucoApp">
+<meta name="theme-color" content="#0066cc">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='white'/%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%234978bd' stroke-width='15'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f4ef;--card:#fff;--accent:#0066cc;--accent2:#4da6ff;--text:#1a1a2e;--muted:#6c757d;--border:#e0ddd6;--low:#e63946;--high:#e76f51;--ok:#0066cc;--shadow:0 4px 24px rgba(0,0,0,0.07);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+header{background:var(--accent);color:white;padding:14px 18px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,102,204,0.3);display:flex;justify-content:space-between;align-items:center;}
+header h1{font-family:'DM Serif Display',serif;font-size:1.3rem;letter-spacing:-0.01em;}
+header p{font-size:0.7rem;opacity:0.75;margin-top:1px;}
+.sync-indicator{font-size:0.7rem;padding:3px 9px;border-radius:20px;font-weight:600;white-space:nowrap;}
+.sync-ok{background:rgba(255,255,255,0.2);color:white;}
+.sync-ing{background:rgba(255,255,165,0.3);color:#fff9c4;}
+.sync-err{background:rgba(255,100,100,0.3);color:#ffcdd2;}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,0.08);}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 12px;cursor:pointer;color:var(--muted);transition:all 0.2s;border:none;background:none;gap:4px;}
+.tab.active{color:var(--accent);}
+.tab svg{width:22px;height:22px;stroke-width:1.8;}
+.tab-label{font-size:0.6rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;}
+.section{display:none;padding:14px 13px 90px;max-width:600px;margin:0 auto;}
+.section.active{display:block;}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--border);}
+.card-title{font-family:'DM Serif Display',serif;font-size:1rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.loading-overlay{position:fixed;inset:0;background:rgba(247,244,239,0.92);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+.loading-spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:0.9rem;color:var(--muted);font-weight:500;}
+.glucose-display{text-align:center;padding:6px 0 4px;}
+.glucose-value{font-family:'DM Serif Display',serif;font-size:3.6rem;line-height:1;transition:color 0.3s;}
+.glucose-unit{font-size:0.82rem;color:var(--muted);margin-top:3px;}
+
+.glucose-input-direct{width:100%;padding:14px;border:2px solid var(--border);border-radius:12px;font-size:1.4rem;font-family:'DM Serif Display',serif;text-align:center;outline:none;transition:border-color 0.2s;color:var(--text);font-weight:400;}
+.glucose-input-direct:focus{border-color:var(--accent);background:white;}
+.glucose-input-direct::placeholder{font-family:'DM Sans',sans-serif;font-size:1rem;color:#bbb;}
+.glucose-status{display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:600;margin-left:5px;}
+.status-low{background:#fde8e8;color:var(--low);}
+.status-ok{background:#e6f0ff;color:var(--accent);}
+.status-high{background:#fff3e0;color:var(--high);}
+.exercise-toggle{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#e6f0ff;border-radius:10px;margin-top:10px;cursor:pointer;border:2px solid transparent;transition:all 0.2s;}
+.exercise-toggle.active{background:#cce0ff;border-color:var(--accent2);}
+.toggle-switch{width:36px;height:20px;background:#ccc;border-radius:10px;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle-switch::after{content:'';position:absolute;width:16px;height:16px;background:white;border-radius:50%;top:2px;left:2px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+.exercise-toggle.active .toggle-switch{background:var(--accent);}
+.exercise-toggle.active .toggle-switch::after{transform:translateX(16px);}
+.toggle-label{font-size:0.82rem;font-weight:500;}
+.toggle-hint{font-size:0.72rem;color:var(--muted);}
+.search-box{position:relative;margin-bottom:10px;}
+.search-box input{width:100%;padding:10px 14px 10px 38px;border:2px solid var(--border);border-radius:11px;font-size:0.88rem;font-family:'DM Sans',sans-serif;background:var(--bg);outline:none;transition:border-color 0.2s;}
+.search-box input:focus{border-color:var(--accent2);background:white;}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.85rem;}
+.search-results{background:white;border-radius:11px;border:1px solid var(--border);max-height:250px;overflow-y:auto;box-shadow:var(--shadow);}
+.result-category{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;padding:5px 13px 3px;background:var(--bg);border-bottom:1px solid var(--border);font-weight:600;}
+.search-result-item{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;display:flex;justify-content:space-between;align-items:flex-start;gap:9px;}
+.search-result-item:last-child{border-bottom:none;}
+.search-result-item:hover{background:#f0f6ff;}
+.result-name{font-size:0.83rem;font-weight:500;}
+.result-meta{font-size:0.68rem;color:var(--muted);margin-top:1px;}
+.result-carbs{font-size:0.74rem;font-weight:600;color:var(--accent);white-space:nowrap;background:#e6f0ff;padding:2px 7px;border-radius:20px;flex-shrink:0;}
+.food-list{display:flex;flex-direction:column;gap:8px;}
+.food-item{background:#f0f6ff;border:1px solid #99c2ff;border-radius:11px;padding:10px 12px;animation:slideIn 0.2s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+.food-item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;}
+.food-item-name{font-size:0.85rem;font-weight:600;}
+.food-item-ref{font-size:0.68rem;color:var(--muted);margin-top:2px;}
+.remove-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.9rem;padding:0;flex-shrink:0;}
+.remove-btn:hover{color:var(--low);}
+.food-item-amount{display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.amount-label{font-size:0.74rem;color:var(--muted);white-space:nowrap;}
+.amount-input{width:75px;padding:5px 7px;border:2px solid var(--border);border-radius:7px;font-size:0.92rem;font-family:'DM Sans',sans-serif;text-align:center;outline:none;transition:border-color 0.2s;background:white;}
+.amount-input:focus{border-color:var(--accent2);}
+.amount-unit{font-size:0.76rem;color:var(--muted);background:var(--bg);padding:4px 8px;border-radius:7px;border:1px solid var(--border);}
+.amount-cho{margin-left:auto;font-size:0.86rem;font-weight:700;color:var(--accent);background:#e6f0ff;padding:3px 9px;border-radius:20px;}
+.portion-controls{display:flex;align-items:center;gap:7px;margin-top:8px;}
+.qty-btn{width:27px;height:27px;border-radius:50%;background:white;border:1.5px solid var(--accent2);color:var(--accent);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:600;transition:all 0.15s;}
+.qty-btn:hover{background:var(--accent);color:white;border-color:var(--accent);}
+.qty-value{font-weight:600;min-width:24px;text-align:center;font-size:0.9rem;}
+.qty-portion-label{font-size:0.74rem;color:var(--muted);flex:1;}
+.cho-override-row{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px dashed #99c2ff;}
+.cho-override-label{font-size:0.7rem;color:var(--muted);}
+.cho-override-input{width:60px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:0.85rem;font-family:'DM Sans',sans-serif;text-align:center;outline:none;background:white;}
+.cho-override-input:focus{border-color:var(--accent2);}
+.cho-override-unit{font-size:0.7rem;color:var(--muted);}
+.save-cho-btn{font-size:0.68rem;padding:3px 8px;background:var(--accent);color:white;border:none;border-radius:7px;cursor:pointer;margin-left:auto;}
+.totals-bar{background:var(--card);border-radius:11px;padding:11px 13px;display:flex;justify-content:space-between;border:1px solid var(--border);margin-bottom:12px;}
+.total-item{text-align:center;}
+.total-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+.total-value{font-size:1.15rem;font-weight:700;color:var(--accent);margin-top:2px;}
+.result-card{background:linear-gradient(135deg,#0066cc 0%,#004999 100%);color:white;border-radius:18px;padding:20px;margin-bottom:12px;box-shadow:0 8px 32px rgba(0,102,204,0.35);}
+.result-title{font-family:'DM Serif Display',serif;font-size:0.92rem;opacity:0.85;margin-bottom:5px;}
+.result-dose{font-family:'DM Serif Display',serif;font-size:3.4rem;line-height:1;}
+.result-unit{opacity:0.8;font-size:0.82rem;margin-top:3px;}
+.result-breakdown{margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.2);display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.breakdown-label{font-size:0.64rem;opacity:0.7;text-transform:uppercase;letter-spacing:0.05em;}
+.breakdown-value{font-size:1.05rem;font-weight:600;margin-top:2px;}
+.plate-summary{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.2);}
+.plate-summary-title{font-size:0.64rem;opacity:0.7;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;}
+.plate-food-line{display:flex;justify-content:space-between;font-size:0.78rem;opacity:0.9;padding:2px 0;}
+.bolo-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+.bolo-table th{background:#e6f0ff;color:var(--accent);padding:7px 10px;text-align:left;font-weight:600;font-size:0.72rem;text-transform:uppercase;}
+.bolo-table td{padding:7px 10px;border-bottom:1px solid var(--border);}
+.bolo-table tr:last-child td{border-bottom:none;}
+.bolo-table tr.active-row{background:#fff9c4;}
+.bolo-input{width:55px;padding:4px 6px;border:2px solid var(--border);border-radius:6px;font-size:0.88rem;font-family:'DM Sans',sans-serif;text-align:center;outline:none;}
+.bolo-input:focus{border-color:var(--accent2);}
+.calc-btn{width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:0.92rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;margin-bottom:8px;}
+.calc-btn:hover{background:#004999;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,102,204,0.3);}
+.btn-secondary{width:100%;padding:11px;background:white;color:var(--accent);border:2px solid var(--accent);border-radius:11px;font-size:0.88rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;}
+.btn-secondary:hover{background:#f0f6ff;}
+.alarm-card{background:#fff8e1;border:1px solid #ffd54f;border-radius:13px;padding:14px;margin-bottom:12px;}
+.alarm-title{font-weight:600;font-size:0.88rem;color:#e65100;margin-bottom:9px;}
+.alarm-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #ffe082;}
+.alarm-item:last-child{border-bottom:none;}
+.alarm-time{font-size:1.05rem;font-weight:700;color:#e65100;}
+.alarm-status{font-size:0.74rem;font-weight:600;padding:3px 9px;border-radius:20px;}
+.alarm-pending{background:#fff3e0;color:#e65100;}
+.alarm-done{background:#e6f0ff;color:var(--accent);}
+/* log-item moved to HISTORIAL MEJORADO */
+.log-item-ok{border:1.5px solid #6abf8a;background:#f3fbf6;}
+.log-item-ok .log-item-header{background:#f3fbf6;}
+.log-item-ok .log-item-header:hover{background:#e8f7ef;}
+.log-item-bad{border:1.5px solid #f4a0a0;background:#fff6f6;}
+.log-item-bad .log-item-header{background:#fff6f6;}
+.log-item-bad .log-item-header:hover{background:#ffe8e8;}
+.log-item-pending{border:1.5px solid var(--border);background:white;}
+.log-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:2px;}
+.dot-ok{background:#34a85a;}
+.dot-bad{background:#e63946;}
+.dot-pending{background:#ccc;}
+.log-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;}
+.log-date{font-size:0.75rem;color:var(--muted);}
+.log-dose{font-family:'DM Serif Display',serif;font-size:1.5rem;color:var(--accent);}
+.log-dose-unit{font-size:0.7rem;color:var(--muted);}
+.log-foods{font-size:0.75rem;color:var(--muted);margin-bottom:7px;}
+.log-glucose-row{display:flex;gap:6px;flex-wrap:wrap;}
+.log-glucose-chip{padding:3px 9px;border-radius:20px;font-size:0.72rem;font-weight:600;}
+.chip-pre{background:#e3f2fd;color:#1565c0;}
+.chip-1h{background:#f3e5f5;color:#6a1b9a;}
+.chip-15h{background:#fce4ec;color:#880e4f;}
+.chip-empty{background:var(--bg);color:var(--muted);border:1px dashed var(--border);cursor:pointer;}
+.log-impact{margin-top:9px;padding:7px 11px;border-radius:9px;font-size:0.75rem;}
+.impact-good{background:#e6f0ff;color:var(--accent);}
+.impact-low{background:#fde8e8;color:var(--low);}
+.impact-high{background:#fff3e0;color:var(--high);}
+.analysis-card{border-radius:13px;padding:14px;margin-bottom:11px;}
+.analysis-theory{background:#e6f0ff;border:1px solid #90caf9;}
+.analysis-real{background:#e6f0ff;border:1px solid #99c2ff;}
+.analysis-title{font-weight:700;font-size:0.82rem;margin-bottom:9px;display:flex;align-items:center;gap:5px;}
+.theory-title{color:#1565c0;}
+.real-title{color:var(--accent);}
+.stat-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.06);}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{color:var(--muted);font-size:0.76rem;}
+.stat-value{font-weight:600;font-size:0.8rem;}
+.setting-group{margin-bottom:16px;}
+.setting-label{font-size:0.76rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;}
+.setting-input{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:9px;font-size:0.92rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;background:var(--bg);}
+.setting-input:focus{border-color:var(--accent);background:white;}
+.setting-hint{font-size:0.7rem;color:var(--muted);margin-top:3px;}
+.save-btn{width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:11px;font-size:0.9rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.2s;}
+.save-btn:hover{background:#004999;}
+.save-success{text-align:center;color:var(--accent);font-size:0.82rem;font-weight:500;margin-top:7px;opacity:0;transition:opacity 0.3s;}
+.save-success.show{opacity:1;}
+.add-food-form{background:#f0f6ff;border:1px solid #99c2ff;border-radius:11px;padding:13px;margin-top:10px;}
+.add-food-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.add-food-input{flex:1;min-width:120px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:'DM Sans',sans-serif;outline:none;background:white;}
+.add-food-input:focus{border-color:var(--accent2);}
+.add-food-select{flex:1;min-width:120px;padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif;outline:none;background:white;}
+.warning-box{background:#fff3e0;border:1px solid #ffb74d;border-radius:9px;padding:10px 12px;font-size:0.76rem;color:#e65100;margin-top:12px;line-height:1.5;}
+.no-carbs-note{background:#e6f0ff;border-radius:9px;padding:8px 12px;font-size:0.76rem;color:var(--accent);margin-top:8px;}
+.tag-g{font-size:0.62rem;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:9px;margin-left:3px;vertical-align:middle;}
+.tag-p{font-size:0.62rem;background:#f3e5f5;color:#6a1b9a;padding:1px 5px;border-radius:9px;margin-left:3px;vertical-align:middle;}
+.tag-custom{font-size:0.62rem;background:#fff3e0;color:#e65100;padding:1px 5px;border-radius:9px;margin-left:3px;vertical-align:middle;}
+.empty-state{text-align:center;padding:28px 14px;color:var(--muted);}
+.empty-icon{font-size:2rem;margin-bottom:7px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:18px;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:18px;padding:22px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.modal-title{font-family:'DM Serif Display',serif;font-size:1.05rem;color:var(--accent);margin-bottom:14px;}
+.modal-input{width:100%;padding:11px 13px;border:2px solid var(--border);border-radius:9px;font-size:0.95rem;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:9px;transition:border-color 0.2s;}
+.modal-input:focus{border-color:var(--accent);}
+.modal-desc{font-size:0.78rem;color:var(--muted);margin-bottom:12px;}
+.modal-btns{display:flex;gap:9px;}
+.modal-btn{flex:1;padding:11px;border:none;border-radius:9px;font-size:0.88rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;}
+.modal-confirm{background:var(--accent);color:white;}
+.modal-cancel{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+
+.cho-from-label{display:flex;align-items:center;gap:5px;margin-top:6px;padding-top:6px;border-top:1px dashed #99c2ff;flex-wrap:wrap;}
+.cho-from-label-title{font-size:0.7rem;color:var(--muted);width:100%;}
+.cho-from-input{width:65px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:0.82rem;font-family:'DM Sans',sans-serif;text-align:center;outline:none;background:white;}
+.cho-from-input:focus{border-color:var(--accent2);}
+.cho-from-result{margin-left:auto;font-size:0.8rem;font-weight:700;color:var(--accent);background:#e6f0ff;padding:3px 9px;border-radius:20px;}
+
+
+/* HISTORIAL MEJORADO */
+.log-item{border-radius:11px;border:1px solid var(--border);margin-bottom:9px;background:white;overflow:hidden;}
+.log-item-header{display:flex;justify-content:space-between;align-items:center;padding:12px 13px;cursor:pointer;user-select:none;}
+.log-item-header:hover{background:#f8f9fa;}
+.log-header-left{display:flex;flex-direction:column;gap:2px;}
+.log-header-title{font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:5px;}
+.log-header-sub{font-size:0.72rem;color:var(--muted);}
+.log-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.log-dose-big{font-family:'DM Serif Display',serif;font-size:1.5rem;color:var(--accent);line-height:1;}
+.log-dose-unit{font-size:0.68rem;color:var(--muted);}
+.log-chevron{font-size:0.7rem;color:var(--muted);transition:transform 0.2s;}
+.log-chevron.open{transform:rotate(180deg);}
+.log-body{display:none;padding:0 13px 13px;border-top:1px solid var(--border);}
+.log-body.open{display:block;}
+.log-section{margin-top:10px;}
+.log-section-title{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:5px;}
+.log-edit-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;}
+.log-edit-input{padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:0.88rem;font-family:'DM Sans',sans-serif;outline:none;background:white;width:80px;}
+.log-edit-input:focus{border-color:var(--accent2);}
+.log-edit-label{font-size:0.76rem;color:var(--muted);}
+.log-save-btn{font-size:0.72rem;padding:4px 10px;background:var(--accent);color:white;border:none;border-radius:7px;cursor:pointer;}
+.log-notes{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif;outline:none;resize:none;min-height:60px;background:white;}
+.log-notes:focus{border-color:var(--accent2);}
+.log-applied-dose{font-size:0.8rem;font-weight:700;color:var(--accent);background:#e6f0ff;padding:3px 10px;border-radius:20px;}
+.log-applied-different{color:var(--high);background:#fff3e0;}
+.historial-actions{display:flex;gap:8px;margin-bottom:12px;}
+.historial-action-btn{flex:1;padding:9px;background:white;border:1.5px solid var(--border);border-radius:10px;font-size:0.76rem;font-weight:600;color:var(--muted);cursor:pointer;transition:all 0.15s;}
+.historial-action-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+
+
+/* LOGIN */
+.login-overlay{position:fixed;inset:0;background:#f7f4ef;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+.login-box{background:white;border-radius:20px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,102,204,0.15);border:1px solid var(--border);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo img{width:80px;height:80px;}
+.login-title{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--accent);text-align:center;margin-bottom:4px;}
+.login-subtitle{font-size:0.78rem;color:var(--muted);text-align:center;margin-bottom:28px;}
+.login-field{margin-bottom:14px;}
+.login-label{font-size:0.74rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:5px;display:block;}
+.login-input{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:11px;font-size:1rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;background:var(--bg);}
+.login-input:focus{border-color:var(--accent);background:white;}
+.login-btn{width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;transition:all 0.2s;}
+.login-btn:hover{background:#004999;transform:translateY(-1px);}
+.login-error{background:#fde8e8;color:var(--low);border-radius:9px;padding:9px 12px;font-size:0.8rem;margin-top:10px;text-align:center;display:none;}
+.logout-btn{font-size:0.7rem;padding:3px 9px;border-radius:20px;border:none;background:rgba(255,255,255,0.2);color:white;cursor:pointer;margin-left:8px;}
+.logout-btn:hover{background:rgba(255,255,255,0.35);}
+.search-results::-webkit-scrollbar{width:4px;}
+.search-results::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.section-divider{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin:14px 0 8px;padding-left:2px;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="icon-192.png" alt="GlucoApp" onerror="this.style.display='none'">
+    </div>
+    <div class="login-title">GlucoApp</div>
+    <div class="login-subtitle">Calculadora de insulina · Registro · Análisis</div>
+    <div class="login-field">
+      <label class="login-label">Usuario</label>
+      <input type="text" class="login-input" id="login-user" placeholder="Usuario" autocomplete="username" autocapitalize="none">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Contraseña</label>
+      <input type="password" class="login-input" id="login-pass" placeholder="Contraseña" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar 💙</button>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos.</div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Cargando...</div>
+  <button onclick="skipLoading()" style="margin-top:20px;padding:10px 24px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:0.85rem;cursor:pointer;display:none;" id="skip-btn">Entrar sin sincronizar</button>
+</div>
+
+<header>
+  <div>
+    <h1>GlucoApp</h1>
+    <p>Calculadora · Registro · Análisis</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;"><div class="sync-indicator sync-ok" id="sync-indicator">Sincronizado</div><button class="logout-btn" onclick="doLogout()">Salir</button></div>
+</header>
+
+<nav class="bottom-nav">
+  <button class="tab active" onclick="showTab('calcular',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+    <span class="tab-label">Calcular</span>
+  </button>
+  <button class="tab" onclick="showTab('alarmas',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+    <span class="tab-label">Alarmas</span>
+  </button>
+  <button class="tab" onclick="showTab('historial',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span class="tab-label">Historial</span>
+  </button>
+  <button class="tab" onclick="showTab('analisis',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    <span class="tab-label">Analisis</span>
+  </button>
+  <button class="tab" onclick="showTab('config',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span class="tab-label">Config</span>
+  </button>
+</nav>
+
+<!-- CALCULAR -->
+<div class="section active" id="tab-calcular">
+  <div class="card">
+    <div class="card-title">Glucosa actual <span id="glucose-status" class="glucose-status status-ok">En rango ✓</span></div>
+    <input type="number" class="glucose-input-direct" id="glucose-direct" placeholder="mg/dL" min="40" max="400" oninput="updateGlucoseFromInput(this.value)" inputmode="numeric">
+    <div class="exercise-toggle" id="exercise-toggle" onclick="toggleExercise()">
+      <div class="toggle-switch" id="toggle-switch"></div>
+      <div><div class="toggle-label">Hice ejercicio hace menos de 2hs</div>
+      <div class="toggle-hint">Activa el FS post-ejercicio (50 en vez de 30)</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Agregar alimentos</div>
+    <div class="search-box">
+      <span class="search-icon"></span>
+      <input type="text" id="food-search" placeholder="Buscar... ej: arroz, banana, pan..." oninput="searchFood(this.value)" autocomplete="off">
+    </div>
+    <div id="search-results" class="search-results" style="display:none"></div>
+    <div class="no-carbs-note">💡 <strong>Sin insulina:</strong> carnes, huevos, quesos, aceites, verduras de hoja, condimentos.</div>
+  </div>
+  <div class="card" id="selected-card" style="display:none">
+    <div class="card-title">Mi plato</div>
+    <div class="food-list" id="food-list"></div>
+  </div>
+  <div class="totals-bar" id="totals-bar" style="display:none">
+    <div class="total-item"><div class="total-label">Total CHO</div><div class="total-value" id="total-cho">0g</div></div>
+    <div class="total-item"><div class="total-label">Glucosa</div><div class="total-value" id="total-glucose">120</div></div>
+    <div class="total-item"><div class="total-label">FS activo</div><div class="total-value" id="total-fs">30</div></div>
+  </div>
+  <button class="calc-btn" onclick="calcularDosis()">Calcular dosis</button>
+  <div id="result-section" style="display:none;margin-top:4px;">
+    <div class="result-card">
+      <div class="result-title">Dosis recomendada</div>
+      <div class="result-dose" id="result-dose">0</div>
+      <div class="result-unit">unidades de insulina</div>
+      <div class="result-breakdown">
+        <div><div class="breakdown-label">Por comida</div><div class="breakdown-value" id="result-meal">0 U</div></div>
+        <div><div class="breakdown-label">Bolo correc.</div><div class="breakdown-value" id="result-bolo">0 U</div></div>
+        <div><div class="breakdown-label">CHO totales</div><div class="breakdown-value" id="result-cho-total">0g</div></div>
+      </div>
+      <div class="plate-summary" id="plate-summary"></div>
+    </div>
+    <button class="calc-btn" onclick="registrarDosis()" style="background:#004999;">Confirmar y registrar</button>
+    <div class="warning-box">⚠️ Herramienta de apoyo. Consultá siempre con tu diabetóloga. No reemplaza el criterio profesional.</div>
+  </div>
+</div>
+
+<!-- ALARMAS -->
+<div class="section" id="tab-alarmas">
+  <div id="no-alarms" class="card" style="text-align:center;padding:28px;">
+    <div style="font-size:1.8rem;margin-bottom:9px;">⏰</div>
+    <div style="color:var(--muted);font-size:0.86rem;">Calculá una dosis y confirmala para activar los recordatorios.</div>
+  </div>
+  <div id="alarms-container" style="display:none">
+    <div class="alarm-card"><div class="alarm-title">Recordatorios activos</div><div id="alarm-list"></div></div>
+    <div class="card" style="font-size:0.78rem;color:var(--muted);line-height:1.6;">
+      📌 <strong>¿Por qué medir a la hora y hora y media?</strong><br>
+      La insulina rápida tiene su pico entre 60 y 90 minutos. Medir en esos momentos muestra si la dosis fue exacta, y con el tiempo la app aprende tus patrones reales.
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="section" id="tab-historial">
+  <div id="historial-empty" class="empty-state"><div class="empty-icon">📋</div><p>Aún no hay registros.</p></div>
+  <div id="historial-actions" style="display:none;">
+    <div class="historial-actions">
+      <button class="historial-action-btn" onclick="downloadCSV()">Descargar CSV</button>
+      <button class="historial-action-btn" onclick="expandAll()">Expandir todo</button>
+      <button class="historial-action-btn" onclick="collapseAll()">Contraer todo</button>
+    </div>
+  </div>
+  <div id="historial-list"></div>
+</div>
+
+<!-- ANÁLISIS -->
+<div class="section" id="tab-analisis">
+  <div id="analysis-empty" class="empty-state"><div class="empty-icon">🧠</div><p>Necesitás al menos <strong>3 registros con glucosa post-dosis</strong> para ver el análisis.</p></div>
+  <div id="analysis-content" style="display:none">
+    <div class="card analysis-card analysis-theory"><div class="analysis-title theory-title">Según tu diabetóloga — teoría</div><div id="theory-body"></div></div>
+    <div class="card analysis-card analysis-real"><div class="analysis-title real-title">Según tus datos reales</div><div id="real-body"></div></div>
+    <div class="card"><div class="card-title">Recomendación</div><div id="recommendation-body" style="font-size:0.83rem;line-height:1.7;"></div></div>
+    <div class="warning-box">⚠️ Recomendaciones orientativas. Cualquier ajuste debe ser validado por tu diabetóloga.</div>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="section" id="tab-config">
+  <div class="card">
+    <div class="card-title">Parámetros de tratamiento</div>
+    <div class="setting-group">
+      <div class="setting-label">Ratio (1 U cada X gramos CHO)</div>
+      <input type="number" class="setting-input" id="config-ic" placeholder="Ej: 7" min="1" max="50">
+      <div class="setting-hint">Tu ratio es 7 → 1 unidad por cada 7g de carbohidratos.</div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">FS normal (1 U baja X mg/dL)</div>
+      <input type="number" class="setting-input" id="config-cf" placeholder="Ej: 30" min="1" max="200">
+      <div class="setting-hint">Factor de sensibilidad sin ejercicio = 30.</div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">FS post-ejercicio (1 U baja X mg/dL)</div>
+      <input type="number" class="setting-input" id="config-cf-ex" placeholder="Ej: 50" min="1" max="200">
+      <div class="setting-hint">Factor de sensibilidad luego del ejercicio = 50.</div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">Rango objetivo de glucosa (mg/dL)</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" class="setting-input" id="config-target-min" placeholder="Mín. ej: 80" min="60" max="180" style="flex:1;">
+        <span style="color:var(--muted);font-size:0.9rem;flex-shrink:0;">—</span>
+        <input type="number" class="setting-input" id="config-target-max" placeholder="Máx. ej: 140" min="80" max="300" style="flex:1;">
+      </div>
+      <div class="setting-hint">Ej: 80 – 140 mg/dL. Dosis correcta si la glucosa post queda dentro de este rango.</div>
+    </div>
+    <button class="save-btn" onclick="saveConfig()">Guardar parámetros</button>
+    <div class="save-success" id="save-success">✓ Guardado en la nube</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Tabla de Bolo</div>
+    <p style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;">Unidades de corrección según el rango de glucosa.</p>
+    <table class="bolo-table"><thead><tr><th>Rango (mg/dL)</th><th>Unidades bolo</th></tr></thead>
+    <tbody id="bolo-tbody"></tbody></table>
+    <div style="margin-top:10px;">
+      <button class="save-btn" onclick="saveBolo()">Guardar tabla</button>
+    </div>
+    <div class="save-success" id="save-bolo-success">✓ Tabla guardada en la nube</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Agregar alimento personalizado</div>
+    <p style="font-size:0.76rem;color:var(--muted);margin-bottom:10px;">Los alimentos que agregues quedan guardados para todos los dispositivos.</p>
+    <div class="add-food-form">
+      <div class="add-food-row">
+        <input type="text" class="add-food-input" id="new-food-name" placeholder="Nombre del alimento">
+        <select class="add-food-select" id="new-food-cat">
+          <option value="Mis alimentos">Mis alimentos</option>
+          <option value="Vegetales">Vegetales</option>
+          <option value="Frutas Frescas">Frutas Frescas</option>
+          <option value="Cereales y Pastas">Cereales y Pastas</option>
+          <option value="Panes">Panes</option>
+          <option value="Lácteos">Lácteos</option>
+          <option value="Azúcar y Dulces">Azúcar y Dulces</option>
+          <option value="Helados">Helados</option>
+          <option value="Comidas Regionales">Comidas Regionales</option>
+          <option value="Bebidas">Bebidas</option>
+          <option value="Salados y Copetín">Salados y Copetín</option>
+        </select>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;font-weight:600;">¿Cómo querés ingresar los carbohidratos?</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button id="cho-mode-100" onclick="setChoMode('100')" style="flex:1;padding:7px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:white;font-size:0.76rem;font-weight:600;cursor:pointer;">Sé los CHO/100g</button>
+        <button id="cho-mode-calc" onclick="setChoMode('calc')" style="flex:1;padding:7px;border-radius:8px;border:2px solid var(--border);background:white;color:var(--muted);font-size:0.76rem;font-weight:600;cursor:pointer;">Tengo el paquete</button>
+      </div>
+      <!-- Tipo de medición -->
+      <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;font-weight:600;">¿Cómo se mide este alimento?</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button id="food-type-g" onclick="setFoodType('g')" style="flex:1;padding:7px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:white;font-size:0.76rem;font-weight:600;cursor:pointer;">Por gramos</button>
+        <button id="food-type-p" onclick="setFoodType('p')" style="flex:1;padding:7px;border-radius:8px;border:2px solid var(--border);background:white;color:var(--muted);font-size:0.76rem;font-weight:600;cursor:pointer;">Por porción</button>
+      </div>
+
+      <!-- GRAMOS: referencia + modo CHO -->
+      <div id="food-type-g-fields">
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;font-weight:600;">¿Cómo ingresás los CHO?</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button id="cho-mode-100" onclick="setChoMode('100')" style="flex:1;padding:7px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:white;font-size:0.76rem;font-weight:600;cursor:pointer;">Sé los CHO/100g</button>
+          <button id="cho-mode-calc" onclick="setChoMode('calc')" style="flex:1;padding:7px;border-radius:8px;border:2px solid var(--border);background:white;color:var(--muted);font-size:0.76rem;font-weight:600;cursor:pointer;">Tengo el paquete</button>
+        </div>
+        <!-- Directo -->
+        <div id="cho-mode-100-fields">
+          <input type="number" class="add-food-input" id="new-food-carbs" placeholder="CHO por 100g" min="0" max="999" style="width:100%;margin-bottom:8px;">
+        </div>
+        <!-- Desde etiqueta -->
+        <div id="cho-mode-calc-fields" style="display:none;">
+          <div style="background:#e6f0ff;border-radius:9px;padding:10px 12px;margin-bottom:8px;font-size:0.76rem;color:var(--accent);">
+            📦 Datos del etiquetado nutricional
+          </div>
+          <div class="add-food-row" style="align-items:center;">
+            <input type="number" class="add-food-input" id="new-food-weight" placeholder="Porción (g)" min="1" style="max-width:110px;" oninput="calcNewFoodCho()">
+            <span style="font-size:0.76rem;color:var(--muted);white-space:nowrap;">g contienen</span>
+            <input type="number" class="add-food-input" id="new-food-cho-total" placeholder="CHO (g)" min="0" style="max-width:100px;" oninput="calcNewFoodCho()">
+            <span style="font-size:0.76rem;color:var(--muted);white-space:nowrap;">g CHO</span>
+          </div>
+          <div id="new-food-calc-result" style="font-size:0.8rem;color:var(--accent);font-weight:600;margin-top:4px;min-height:18px;"></div>
+          <input type="hidden" id="new-food-carbs" value="">
+        </div>
+        <input type="text" class="add-food-input" id="new-food-portion-g" placeholder="Referencia (ej: 1 taza = 200g, 1 rebanada = 30g)" style="width:100%;margin-top:6px;">
+      </div>
+
+      <!-- PORCIONES: CHO por porción + descripción -->
+      <div id="food-type-p-fields" style="display:none;">
+        <div class="add-food-row" style="align-items:center;flex-wrap:wrap;">
+          <input type="number" class="add-food-input" id="new-food-carbs-p" placeholder="CHO por porción (g)" min="0" max="999" style="max-width:160px;">
+          <span style="font-size:0.76rem;color:var(--muted);">g CHO / porción</span>
+        </div>
+        <input type="text" class="add-food-input" id="new-food-portion-p" placeholder="¿Qué es 1 porción? (ej: 1 unidad, 1 taza, 2 galletas)" style="width:100%;margin-top:8px;">
+      </div>
+
+      <button class="calc-btn" onclick="addCustomFood()" style="margin-bottom:0;margin-top:10px;">Agregar alimento</button>
+    </div>
+    <div id="custom-foods-list" style="margin-top:10px;"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="color:var(--low);">Zona de peligro</div>
+    <button class="btn-secondary" style="border-color:var(--low);color:var(--low);" onclick="clearData()">Borrar registros</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Ingresar glucosa</div>
+    <div class="modal-desc" id="modal-desc"></div>
+    <input type="number" class="modal-input" id="modal-input" placeholder="mg/dL" min="40" max="500">
+    <div class="modal-btns">
+      <button class="modal-btn modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="modal-btn modal-confirm" onclick="saveModalValue()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== SUPABASE =====================
+const SUPABASE_URL = 'https://sdvvtaiyjloffozxdwpv.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkdnZ0YWl5amxvZmZvenhkd3B2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTUwMTYsImV4cCI6MjA4OTg3MTAxNn0.iFbmXfOq8938fxDe1HJxijbg25Th0nFG-Yytyb-s0z8';
+const H = {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+
+async function sbGet(table, filter=''){
+  try {
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{
+      headers:{...H,'Accept':'application/json'},
+      signal: AbortSignal.timeout(7000)
+    });
+    if(!r.ok){
+      console.warn(`sbGet ${table} failed: ${r.status} ${r.statusText}`);
+      return [];
+    }
+    return r.json();
+  } catch(e) {
+    console.warn(`sbGet ${table} error:`, e.message);
+    return [];
+  }
+}
+async function sbUpsert(table,data){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}`,{method:'POST',headers:{...H,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify(data)});
+  return r.ok;
+}
+async function sbInsert(table,data){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}`,{method:'POST',headers:{...H,'Prefer':'return=representation'},body:JSON.stringify(data)});
+  return r.ok;
+}
+async function sbUpdate(table,data,filter){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{method:'PATCH',headers:H,body:JSON.stringify(data)});
+  return r.ok;
+}
+async function sbDelete(table,filter){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`,{method:'DELETE',headers:H});
+  return r.ok;
+}
+
+function setSyncStatus(status){
+  const el=document.getElementById('sync-indicator');
+  if(!el)return;
+  if(status==='ok'){el.textContent='Sincronizado';el.className='sync-indicator sync-ok';el.onclick=null;el.style.cursor='default';}
+  else if(status==='ing'){el.textContent='Guardando...';el.className='sync-indicator sync-ing';el.onclick=null;}
+  else{el.textContent='Sin conexion — reintentar';el.className='sync-indicator sync-err';el.style.cursor='pointer';
+    el.onclick=()=>{ setSyncStatus('ing'); loadFromCloud().then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('err')); };
+  }
+}
+
+// ===================== FOOD DATABASE =====================
+const BASE_FOODS=[
+  {name:"Papa",cat:"Vegetales",mode:"g",portionDesc:"100 g = 1 unidad chica",carbsPer100g:15},
+  {name:"Choclo en grano",cat:"Vegetales",mode:"p",portionDesc:"½ taza o ½ lata",carbsPerP:15},
+  {name:"Choclo entero",cat:"Vegetales",mode:"p",portionDesc:"½ unidad",carbsPerP:15},
+  {name:"Mandioca",cat:"Vegetales",mode:"g",portionDesc:"100 g",carbsPer100g:30},
+  {name:"Batata",cat:"Vegetales",mode:"g",portionDesc:"100 g",carbsPer100g:30},
+  {name:"Puré de batata",cat:"Vegetales",mode:"p",portionDesc:"½ taza",carbsPerP:30},
+  {name:"Puré de papa",cat:"Vegetales",mode:"p",portionDesc:"½ taza",carbsPerP:15},
+  {name:"Calabaza cocida",cat:"Vegetales",mode:"p",portionDesc:"1 taza o 2 rodajas",carbsPerP:15},
+  {name:"Zapallo cocido",cat:"Vegetales",mode:"p",portionDesc:"1 taza o 2 rodajas",carbsPerP:15},
+  {name:"Remolacha",cat:"Vegetales",mode:"g",portionDesc:"150 g = 1 unidad grande",carbsPer100g:10},
+  {name:"Zanahoria",cat:"Vegetales",mode:"g",portionDesc:"~100 g = 1 unidad grande",carbsPer100g:15},
+  {name:"Ananá",cat:"Frutas Frescas",mode:"p",portionDesc:"1 compotera o 2 rodajas",carbsPerP:15},
+  {name:"Banana",cat:"Frutas Frescas",mode:"g",portionDesc:"~100 g = ½ banana grande",carbsPer100g:15},
+  {name:"Cerezas",cat:"Frutas Frescas",mode:"g",portionDesc:"~100 g = 15 unidades",carbsPer100g:15},
+  {name:"Ciruelas",cat:"Frutas Frescas",mode:"p",portionDesc:"2 unidades medianas",carbsPerP:15},
+  {name:"Damascos",cat:"Frutas Frescas",mode:"p",portionDesc:"3 unidades grandes",carbsPerP:15},
+  {name:"Duraznos",cat:"Frutas Frescas",mode:"g",portionDesc:"~150 g = 1 unidad mediana",carbsPer100g:10},
+  {name:"Frutillas",cat:"Frutas Frescas",mode:"g",portionDesc:"~150 g = 1 taza",carbsPer100g:10},
+  {name:"Melón",cat:"Frutas Frescas",mode:"g",portionDesc:"~200 g = 1 rodaja",carbsPer100g:7.5},
+  {name:"Mandarina",cat:"Frutas Frescas",mode:"p",portionDesc:"1 grande o 2 chicas",carbsPerP:15},
+  {name:"Mango",cat:"Frutas Frescas",mode:"g",portionDesc:"~250 g = 1 unidad chica",carbsPer100g:12},
+  {name:"Manzana",cat:"Frutas Frescas",mode:"g",portionDesc:"Chica ~100g / Grande ~200g",carbsPer100g:15},
+  {name:"Moras / Arándanos",cat:"Frutas Frescas",mode:"g",portionDesc:"~150 g = 1 taza",carbsPer100g:10},
+  {name:"Naranja",cat:"Frutas Frescas",mode:"p",portionDesc:"1 unidad mediana",carbsPerP:15},
+  {name:"Peras",cat:"Frutas Frescas",mode:"g",portionDesc:"~100 g = 1 unidad chica",carbsPer100g:15},
+  {name:"Sandía",cat:"Frutas Frescas",mode:"p",portionDesc:"2 compoteras",carbsPerP:15},
+  {name:"Uvas",cat:"Frutas Frescas",mode:"g",portionDesc:"~100 g = 12 uvas chicas",carbsPer100g:15},
+  {name:"Kiwi",cat:"Frutas Frescas",mode:"p",portionDesc:"2 unidades chicas",carbsPerP:15},
+  {name:"Frambuesas",cat:"Frutas Frescas",mode:"p",portionDesc:"½ taza o 1 compotera",carbsPerP:15},
+  {name:"Pasas de uva",cat:"Frutas Desecadas",mode:"g",portionDesc:"25 g = 1 pocillo",carbsPer100g:60},
+  {name:"Avena cocida",cat:"Cereales y Pastas",mode:"p",portionDesc:"½ taza o 2 cucharadas",carbsPerP:15},
+  {name:"Almidón de maíz / harina de mandioca",cat:"Cereales y Pastas",mode:"g",portionDesc:"20 g = 1 cuchara sopera",carbsPer100g:75},
+  {name:"Harina (trigo/maíz)",cat:"Cereales y Pastas",mode:"g",portionDesc:"20 g = 2 cucharadas",carbsPer100g:75},
+  {name:"Arroz cocido",cat:"Cereales y Pastas",mode:"g",portionDesc:"60g=½ plato · 200g=1 taza",carbsPer100g:25},
+  {name:"Arroz crudo",cat:"Cereales y Pastas",mode:"g",portionDesc:"60 g = 1 pocillo café",carbsPer100g:75},
+  {name:"Pasta cocida (fideos, polenta, etc.)",cat:"Cereales y Pastas",mode:"g",portionDesc:"150g=½ plato · 300g=1 plato",carbsPer100g:20},
+  {name:"Ñoquis",cat:"Cereales y Pastas",mode:"p",portionDesc:"10-12 unidades",carbsPerP:15},
+  {name:"Ravioles",cat:"Cereales y Pastas",mode:"p",portionDesc:"½ plato o 20 unidades",carbsPerP:30},
+  {name:"Capelettini de jamón y queso",cat:"Cereales y Pastas",mode:"p",portionDesc:"¾ taza",carbsPerP:40},
+  {name:"Polenta cocida",cat:"Cereales y Pastas",mode:"g",portionDesc:"~150 g = ½ plato",carbsPer100g:10},
+  {name:"Lentejas / porotos / garbanzos cocidos",cat:"Legumbres",mode:"g",portionDesc:"~120 g = ½ taza",carbsPer100g:25},
+  {name:"Pan de molde / lactal / integral",cat:"Panes",mode:"g",portionDesc:"25 g = 1 rebanada",carbsPer100g:60},
+  {name:"Pan de hamburguesa",cat:"Panes",mode:"g",portionDesc:"50 g = 1 unidad",carbsPer100g:60},
+  {name:"Pan árabe / pita",cat:"Panes",mode:"g",portionDesc:"50 g = 1 unidad grande",carbsPer100g:60},
+  {name:"Pan francés",cat:"Panes",mode:"g",portionDesc:"~30 g = 2 rodajas finas",carbsPer100g:50},
+  {name:"Sandwich de miga",cat:"Panes",mode:"p",portionDesc:"1 triángulo",carbsPerP:15},
+  {name:"Pancito de salvado",cat:"Panes",mode:"g",portionDesc:"25 g = 1 unidad",carbsPer100g:60},
+  {name:"Pan de pancho",cat:"Panes",mode:"g",portionDesc:"~50 g = 1 unidad",carbsPer100g:60},
+  {name:"Granola",cat:"Otros Cereales",mode:"g",portionDesc:"~30 g = ¼ taza",carbsPer100g:50},
+  {name:"Barra de cereal",cat:"Otros Cereales",mode:"p",portionDesc:"1 unidad",carbsPerP:15},
+  {name:"Copos de maíz / trigo / arroz simples",cat:"Otros Cereales",mode:"p",portionDesc:"½ taza",carbsPerP:15},
+  {name:"Galleta marinera grande",cat:"Galletitas",mode:"g",portionDesc:"25 g = 1 unidad",carbsPer100g:60},
+  {name:"Galletitas de agua grandes",cat:"Galletitas",mode:"p",portionDesc:"2-3 unidades",carbsPerP:15},
+  {name:"Bizcochitos de grasa",cat:"Galletitas",mode:"p",portionDesc:"3 unidades",carbsPerP:15},
+  {name:"Galletas de arroz redondas",cat:"Galletitas",mode:"p",portionDesc:"2 unidades",carbsPerP:15},
+  {name:"Grisines / Talitas",cat:"Galletitas",mode:"p",portionDesc:"5 unidades chicas",carbsPerP:15},
+  {name:"Mini tostadas",cat:"Galletitas",mode:"p",portionDesc:"5 unidades",carbsPerP:15},
+  {name:"Galletita tipo Biscuit",cat:"Galletitas Dulces",mode:"g",portionDesc:"18 g = 1 unidad",carbsPer100g:83},
+  {name:"Galletita rellena chica",cat:"Galletitas Dulces",mode:"p",portionDesc:"2 unidades",carbsPerP:15},
+  {name:"Medialuna chica",cat:"Galletitas Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:15},
+  {name:"Medialuna grande",cat:"Galletitas Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:30},
+  {name:"Factura con dulce",cat:"Galletitas Dulces",mode:"p",portionDesc:"1 unidad mediana",carbsPerP:30},
+  {name:"Muffin",cat:"Galletitas Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:30},
+  {name:"Vainilla",cat:"Galletitas Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:15},
+  {name:"Churros",cat:"Galletitas Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:30},
+  {name:"Leche fluida entera o descremada",cat:"Lácteos",mode:"p",portionDesc:"1 taza (250 cc)",carbsPerP:15},
+  {name:"Leche en polvo",cat:"Lácteos",mode:"g",portionDesc:"30 g = 3 cucharadas soperas",carbsPer100g:50},
+  {name:"Yogurt bebible dietético",cat:"Lácteos",mode:"p",portionDesc:"1 vaso 200 cc",carbsPerP:15},
+  {name:"Yogurt bebible entero",cat:"Lácteos",mode:"p",portionDesc:"1 vaso 200 cc",carbsPerP:30},
+  {name:"Yogurt dietético batido saborizado",cat:"Lácteos",mode:"p",portionDesc:"1 unidad",carbsPerP:10},
+  {name:"Postre lácteo simple",cat:"Lácteos",mode:"p",portionDesc:"1 unidad 120 g",carbsPerP:25},
+  {name:"Flan comercial con caramelo",cat:"Lácteos",mode:"p",portionDesc:"1 pote 110 g",carbsPerP:25},
+  {name:"Leche chocolatada envasada",cat:"Lácteos",mode:"p",portionDesc:"1 vaso 200 cc",carbsPerP:30},
+  {name:"Yogurt tipo griego",cat:"Lácteos",mode:"p",portionDesc:"1 pote 100 g",carbsPerP:15},
+  {name:"Azúcar",cat:"Azúcar y Dulces",mode:"g",portionDesc:"~5 g = 1 cucharita",carbsPer100g:100},
+  {name:"Dulce de leche",cat:"Azúcar y Dulces",mode:"g",portionDesc:"~20 g = 2 cucharadas",carbsPer100g:75},
+  {name:"Miel",cat:"Azúcar y Dulces",mode:"g",portionDesc:"~10 g = 2 cucharitas",carbsPer100g:150},
+  {name:"Alfajor de chocolate con dulce de leche",cat:"Azúcar y Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:30},
+  {name:"Alfajor dietético",cat:"Azúcar y Dulces",mode:"p",portionDesc:"1 unidad",carbsPerP:30},
+  {name:"Caramelos",cat:"Azúcar y Dulces",mode:"p",portionDesc:"3 unidades",carbsPerP:15},
+  {name:"Chocolate de taza",cat:"Azúcar y Dulces",mode:"g",portionDesc:"~20 g = 1 barrita",carbsPer100g:75},
+  {name:"Helado (bocha)",cat:"Helados",mode:"p",portionDesc:"1 bocha = ~60 g",carbsPerP:15},
+  {name:"Cono de vainilla",cat:"Helados",mode:"p",portionDesc:"1 unidad",carbsPerP:15},
+  {name:"Chipá",cat:"Comidas Regionales",mode:"p",portionDesc:"1 unidad grande",carbsPerP:30},
+  {name:"Empanadas",cat:"Comidas Regionales",mode:"p",portionDesc:"1 unidad",carbsPerP:15},
+  {name:"Empanada árabe",cat:"Comidas Regionales",mode:"p",portionDesc:"1 unidad",carbsPerP:30},
+  {name:"Locro",cat:"Comidas Regionales",mode:"p",portionDesc:"1 plato hondo",carbsPerP:75},
+  {name:"Tamales",cat:"Comidas Regionales",mode:"p",portionDesc:"2 unidades",carbsPerP:15},
+  {name:"Tortas fritas",cat:"Comidas Regionales",mode:"p",portionDesc:"1 unidad grande",carbsPerP:30},
+  {name:"Sushi tipo roll",cat:"Comidas Regionales",mode:"p",portionDesc:"1 pieza",carbsPerP:5},
+  {name:"Sushi tipo Nigiri",cat:"Comidas Regionales",mode:"p",portionDesc:"1 pieza",carbsPerP:10},
+  {name:"Pizza a la piedra",cat:"Salados y Copetín",mode:"p",portionDesc:"1/8 de unidad grande",carbsPerP:15},
+  {name:"Papas fritas",cat:"Salados y Copetín",mode:"g",portionDesc:"50 g = paquete chico",carbsPer100g:60},
+  {name:"Maní",cat:"Salados y Copetín",mode:"g",portionDesc:"~60 g = ½ taza",carbsPer100g:17},
+  {name:"Tapa de empanada",cat:"Salados y Copetín",mode:"g",portionDesc:"~20 g = 1 unidad",carbsPer100g:75},
+  {name:"Gaseosa común",cat:"Bebidas",mode:"p",portionDesc:"1 vaso chico 150 cc",carbsPerP:15},
+  {name:"Jugo de naranja o pomelo natural",cat:"Bebidas",mode:"p",portionDesc:"½ vaso 100 cc",carbsPerP:15},
+  {name:"Jugo comercial común",cat:"Bebidas",mode:"p",portionDesc:"1 vaso 200 cc",carbsPerP:15},
+];
+
+const DEFAULT_BOLO=[
+  {min:100,max:140,label:"100 – 140",units:2},
+  {min:141,max:180,label:"141 – 180",units:4},
+  {min:181,max:220,label:"181 – 220",units:6},
+  {min:221,max:260,label:"221 – 260",units:8},
+  {min:261,max:300,label:"261 – 300",units:10},
+  {min:301,max:9999,label:"Más de 300",units:12},
+];
+
+// ===================== STATE =====================
+let plate=[], currentGlucose=120, exerciseMode=false;
+let config={ic:7,cf:30,cfEx:50,targetMin:80,targetMax:140};
+let boloTable=JSON.parse(JSON.stringify(DEFAULT_BOLO));
+let customFoods=[], log=[], choOverrides={};
+let pendingDose=null, alarmTimers=[], modalCallback=null, searchTimeout;
+let customFoodDbIds={}; // name -> db id
+
+// ===================== INIT =====================
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),ms))
+  ]);
+}
+
+async function loadFromCloud(){
+  // Sequential to avoid overwhelming nano plan connection limit
+  const cfgRows = await sbGet('gluco_config','id=eq.main');
+  if(cfgRows.length) config={...config,...cfgRows[0].data};
+
+  const boloRows = await sbGet('gluco_bolo','id=eq.main');
+  if(boloRows.length) boloTable=boloRows[0].data;
+
+  const choRows = await sbGet('gluco_cho_overrides','id=eq.main');
+  if(choRows.length) choOverrides=choRows[0].data;
+
+  const cfRows = await sbGet('gluco_custom_foods','order=created_at.asc');
+  customFoods=cfRows.map(r=>{customFoodDbIds[r.data.name]=r.id;return r.data;});
+
+  const logRows = await sbGet('gluco_log','order=created_at.desc&limit=100');
+  log=logRows.map(r=>r.data);
+}
+
+function skipLoading(){
+  document.getElementById('loading-overlay').style.display='none';
+  setSyncStatus('err');
+}
+
+async function init(){
+  const overlay = document.getElementById('loading-overlay');
+  const loadingText = document.getElementById('loading-text');
+  const skipBtn = document.getElementById('skip-btn');
+  overlay.style.display='flex';
+
+  // Show skip button after 3 seconds
+  const skipTimer = setTimeout(()=>{ if(skipBtn) skipBtn.style.display='block'; }, 3000);
+
+  try {
+    if(loadingText) loadingText.textContent = 'Conectando...';
+    await withTimeout(loadFromCloud(), 8000);
+    setSyncStatus('ok');
+    if(loadingText) loadingText.textContent = 'Listo';
+  } catch(e) {
+    console.warn('Cloud load failed:', e.message);
+    setSyncStatus('err');
+  }
+  clearTimeout(skipTimer);
+
+  // Set UI values
+  document.getElementById('config-ic').value=config.ic||7;
+  document.getElementById('config-cf').value=config.cf||30;
+  document.getElementById('config-cf-ex').value=config.cfEx||50;
+  document.getElementById('config-target-min').value=config.targetMin||80;
+  document.getElementById('config-target-max').value=config.targetMax||140;
+
+  renderBoloTable();
+  renderCustomFoodsList();
+  updateGlucoseDisplay(120);
+  updateFsDisplay();
+  renderHistorial();
+  renderAnalysis();
+  checkActiveAlarms();
+
+  document.getElementById('loading-overlay').style.display='none';
+}
+
+// ===================== TABS =====================
+function showTab(tab,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(el) el.classList.add('active');
+  if(tab==='calcular'){const fs=document.getElementById('food-search');if(fs)fs.value='';hideSearchResults();}
+  if(tab==='historial')renderHistorial();
+  if(tab==='analisis')renderAnalysis();
+  if(tab==='alarmas')renderAlarms();
+}
+
+// ===================== GLUCOSE =====================
+function updateGlucose(val){currentGlucose=parseInt(val);updateGlucoseDisplay(val);}
+// updateGlucoseFromInput handled above
+function updateGlucoseDisplay(val){
+  const d=document.getElementById('glucose-display'),s=document.getElementById('glucose-status'),tg=document.getElementById('total-glucose');
+  d.textContent=val;if(tg)tg.textContent=val;
+  if(val<70){d.style.color='#e63946';s.textContent='Baja ⬇';s.className='glucose-status status-low';}
+  else if(val<=140){d.style.color='#0066cc';s.textContent='En rango ✓';s.className='glucose-status status-ok';}
+  else if(val<=180){d.style.color='#e76f51';s.textContent='Elevada ⬆';s.className='glucose-status status-high';}
+  else{d.style.color='#e63946';s.textContent='Muy alta ⬆⬆';s.className='glucose-status status-high';}
+}
+
+// ===================== EXERCISE =====================
+function toggleExercise(){
+  exerciseMode=!exerciseMode;
+  const t=document.getElementById('exercise-toggle');
+  exerciseMode?t.classList.add('active'):t.classList.remove('active');
+  updateFsDisplay();hideResult();
+}
+function updateFsDisplay(){
+  const fs=exerciseMode?(config.cfEx||50):config.cf;
+  const el=document.getElementById('total-fs');if(el)el.textContent=fs;
+}
+function targetMid(){return Math.round(((config.targetMin||80)+(config.targetMax||140))/2);}
+
+// ===================== BOLO =====================
+function renderBoloTable(){
+  document.getElementById('bolo-tbody').innerHTML=boloTable.map((row,i)=>{
+    const isActive=currentGlucose>=row.min&&currentGlucose<=row.max;
+    return `<tr class="${isActive?'active-row':''}"><td>${row.label}</td>
+    <td><input class="bolo-input" type="number" min="0" max="30" value="${row.units}" id="bolo-${i}"> U</td></tr>`;
+  }).join('');
+}
+async function saveBolo(){
+  boloTable.forEach((row,i)=>{const v=parseFloat(document.getElementById('bolo-'+i).value);if(!isNaN(v))row.units=v;});
+  setSyncStatus('ing');
+  await sbUpsert('gluco_bolo',{id:'main',data:boloTable,updated_at:new Date().toISOString()});
+  setSyncStatus('ok');
+  const s=document.getElementById('save-bolo-success');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);
+}
+function getBoloUnits(glucose){
+  if(glucose<100)return 0;
+  const row=boloTable.find(r=>glucose>=r.min&&glucose<=r.max);
+  return row?row.units:boloTable[boloTable.length-1].units;
+}
+
+// ===================== SEARCH =====================
+function getAllFoods(){return[...BASE_FOODS,...customFoods];}
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+function searchFood(query){
+  clearTimeout(searchTimeout);
+  if(!query||query.length<2){hideSearchResults();return;}
+  searchTimeout=setTimeout(()=>{
+    const q=norm(query);
+    const results=getAllFoods().filter(f=>norm(f.name).includes(q)||norm(f.cat).includes(q)).slice(0,25);
+    renderResults(results);
+  },120);
+}
+function renderResults(results){
+  const c=document.getElementById('search-results');
+  if(!results.length){c.style.display='block';c.innerHTML='<div style="padding:13px;text-align:center;color:var(--muted);font-size:0.8rem;">No encontrado. Podés agregarlo en Config ⚙️</div>';return;}
+  let html='',lastCat='';
+  results.forEach(f=>{
+    const allFoods=getAllFoods(),idx=allFoods.indexOf(f);
+    if(f.cat!==lastCat){html+=`<div class="result-category">${f.cat}</div>`;lastCat=f.cat;}
+    const isCustom=customFoods.includes(f);
+    const tag=isCustom?`<span class="tag-custom">mío</span>`:(f.mode==='g'?`<span class="tag-g">g</span>`:`<span class="tag-p">porción</span>`);
+    const info=f.mode==='g'?`${getCarbsPer100g(f)}g/100g`:`${getCarbsPerP(f)}g/porción`;
+    html+=`<div class="search-result-item" onclick="addToPlate(${idx})">
+      <div><div class="result-name">${f.name}${tag}</div>
+      <div class="result-meta">${f.portionDesc||''}</div></div>
+      <div class="result-carbs">${info}</div></div>`;
+  });
+  c.innerHTML=html;c.style.display='block';
+}
+function hideSearchResults(){const r=document.getElementById('search-results');if(r)r.style.display='none';}
+
+// ===================== CHO OVERRIDES =====================
+function getCarbsPer100g(food){return choOverrides[food.name]!==undefined?choOverrides[food.name]:food.carbsPer100g;}
+function getCarbsPerP(food){return choOverrides[food.name]!==undefined?choOverrides[food.name]:food.carbsPerP;}
+
+// ===================== PLATE =====================
+function addToPlate(idx){
+  const allFoods=getAllFoods();
+  if(plate.find(p=>p.idx===idx)){document.getElementById('food-search').value='';hideSearchResults();return;}
+  const f=allFoods[idx];
+  plate.push({idx,food:f,grams:f.mode==='g'?100:null,qty:f.mode==='p'?1:null,isCustom:customFoods.includes(f)});
+  document.getElementById('food-search').value='';hideSearchResults();renderPlate();hideResult();
+}
+function removeFromPlate(i){plate.splice(i,1);renderPlate();hideResult();}
+function getCarbs(item){
+  const f=item.food;
+  return f.mode==='g'?(getCarbsPer100g(f)*item.grams)/100:getCarbsPerP(f)*item.qty;
+}
+function renderPlate(){
+  const list=document.getElementById('food-list'),card=document.getElementById('selected-card'),bar=document.getElementById('totals-bar');
+  if(!plate.length){card.style.display='none';bar.style.display='none';return;}
+  card.style.display='block';bar.style.display='flex';
+  let total=0;
+  list.innerHTML=plate.map((item,i)=>{
+    const cho=Math.round(getCarbs(item)*10)/10;total+=getCarbs(item);
+    const isCustom=customFoods.includes(item.food);
+    const tag=isCustom?`<span class="tag-custom">mío</span>`:(item.food.mode==='g'?`<span class="tag-g">g</span>`:`<span class="tag-p">porción</span>`);
+    const curCho=item.food.mode==='g'?getCarbsPer100g(item.food):getCarbsPerP(item.food);
+    const overrideRow=`<div class="cho-override-row">
+      <span class="cho-override-label">${item.food.mode==='g'?'CHO/100g:':'CHO/porción:'}</span>
+      <input class="cho-override-input" type="number" min="0" max="200" value="${curCho}" id="cho-ov-${i}" oninput="updateChoLive(${i},this.value)">
+      <span class="cho-override-unit">g</span>
+      <button class="save-cho-btn" onclick="saveChoOverride(${i})">Guardar</button></div>`;
+    if(item.food.mode==='g'){
+      return `<div class="food-item"><div class="food-item-header"><div>
+        <div class="food-item-name">${item.food.name}${tag}</div>
+        <div class="food-item-ref">${item.food.portionDesc||''} · ${getCarbsPer100g(item.food)}g CHO/100g</div></div>
+        <button class="remove-btn" onclick="removeFromPlate(${i})">✕</button></div>
+        <div class="food-item-amount"><span class="amount-label">Cantidad:</span>
+        <input class="amount-input" type="number" min="1" max="2000" value="${item.grams}" oninput="updateGrams(${i},this.value)">
+        <span class="amount-unit">gramos</span><span class="amount-cho" id="cho-${i}">${cho}g CHO</span></div>
+        <div class="cho-from-label">
+          <div class="cho-from-label-title">📦 ¿Tenés el paquete? Ingresá peso real y CHO del etiquetado:</div>
+          <input class="cho-from-input" type="number" min="1" placeholder="Peso (g)" id="lbl-w-${i}" oninput="calcFromLabel(${i})">
+          <span style="font-size:0.7rem;color:var(--muted);">g pesan</span>
+          <input class="cho-from-input" type="number" min="0" placeholder="CHO (g)" id="lbl-c-${i}" oninput="calcFromLabel(${i})">
+          <span style="font-size:0.7rem;color:var(--muted);">g CHO</span>
+          <span class="cho-from-result" id="lbl-r-${i}">→ ingresá datos</span>
+        </div>
+        ${overrideRow}</div>`;
+    } else {
+      return `<div class="food-item"><div class="food-item-header"><div>
+        <div class="food-item-name">${item.food.name}${tag}</div>
+        <div class="food-item-ref">${item.food.portionDesc||'1 porción'}</div></div>
+        <button class="remove-btn" onclick="removeFromPlate(${i})">✕</button></div>
+        <div class="portion-controls"><button class="qty-btn" onclick="updateQty(${i},-0.5)">−</button>
+        <span class="qty-value" id="qty-${i}">${item.qty}</span>
+        <button class="qty-btn" onclick="updateQty(${i},0.5)">+</button>
+        <span class="qty-portion-label">porciones</span>
+        <span class="amount-cho" id="cho-${i}">${cho}g CHO</span></div>
+        ${overrideRow}</div>`;
+    }
+  }).join('');
+  document.getElementById('total-cho').textContent=Math.round(total*10)/10+'g';
+  updateFsDisplay();
+}
+function updateGrams(i,val){plate[i].grams=Math.max(1,parseFloat(val)||1);document.getElementById('cho-'+i).textContent=Math.round(getCarbs(plate[i])*10)/10+'g CHO';updateTotalCho();hideResult();}
+function updateQty(i,delta){plate[i].qty=Math.max(0.5,plate[i].qty+delta);document.getElementById('qty-'+i).textContent=plate[i].qty;document.getElementById('cho-'+i).textContent=Math.round(getCarbs(plate[i])*10)/10+'g CHO';updateTotalCho();hideResult();}
+function updateChoLive(i,val){
+  const item=plate[i],newVal=parseFloat(val)||0;
+  const tempCarbs=item.food.mode==='g'?(newVal*item.grams)/100:newVal*item.qty;
+  document.getElementById('cho-'+i).textContent=Math.round(tempCarbs*10)/10+'g CHO';
+  updateTotalCho();hideResult();
+}
+async function saveChoOverride(i){
+  const item=plate[i],val=parseFloat(document.getElementById('cho-ov-'+i).value);
+  if(!isNaN(val)&&val>=0){
+    choOverrides[item.food.name]=val;
+    setSyncStatus('ing');
+    await sbUpsert('gluco_cho_overrides',{id:'main',data:choOverrides,updated_at:new Date().toISOString()});
+    setSyncStatus('ok');
+    const btn=document.querySelector(`#cho-ov-${i}`).closest('.cho-override-row').querySelector('.save-cho-btn');
+    btn.textContent='✓';btn.style.background='var(--ok)';
+    setTimeout(()=>{btn.textContent='Guardar';btn.style.background='var(--accent)';},2000);
+  }
+  renderPlate();
+}
+function updateTotalCho(){document.getElementById('total-cho').textContent=Math.round(plate.reduce((s,item)=>s+getCarbs(item),0)*10)/10+'g';}
+function calcFromLabel(i){
+  const w=parseFloat(document.getElementById('lbl-w-'+i).value);
+  const c=parseFloat(document.getElementById('lbl-c-'+i).value);
+  const res=document.getElementById('lbl-r-'+i);
+  if(!w||!c||w<=0){res.textContent='→ ingresá datos';return;}
+  const per100=Math.round((c/w)*1000)/10;
+  res.textContent=`= ${per100}g CHO/100g`;
+  // Auto-apply to override
+  choOverrides[plate[i].food.name]=per100;
+  // Update the CHO display live
+  const itemCarbs=(per100*plate[i].grams)/100;
+  document.getElementById('cho-'+i).textContent=Math.round(itemCarbs*10)/10+'g CHO';
+  // Update override input if visible
+  const ovInput=document.getElementById('cho-ov-'+i);
+  if(ovInput)ovInput.value=per100;
+  updateTotalCho();
+}
+
+// ===================== CALCULATE =====================
+function calcularDosis(){
+  if(!config.ic||!config.cf){alert('⚙️ Configurá tus parámetros primero.');return;}
+  if(!plate.length){alert('🍽️ Agregá al menos un alimento.');return;}
+  const totalCarbs=plate.reduce((s,item)=>s+getCarbs(item),0);
+  const mealDose=totalCarbs/config.ic;
+  const bolo=getBoloUnits(currentGlucose);
+  const total=mealDose+bolo;
+  const rounded=Math.round(total*2)/2;
+  pendingDose={totalCarbs,mealDose,bolo,rounded,glucose:currentGlucose,exerciseMode,
+    plate:plate.map(item=>({name:item.food.name,grams:item.grams,qty:item.qty,mode:item.food.mode,cho:Math.round(getCarbs(item)*10)/10}))};
+  document.getElementById('result-dose').textContent=rounded%1===0?rounded:rounded.toFixed(1);
+  document.getElementById('result-meal').textContent=mealDose.toFixed(1)+' U';
+  document.getElementById('result-bolo').textContent=bolo>0?bolo+' U':'0 U';
+  document.getElementById('result-cho-total').textContent=Math.round(totalCarbs)+'g';
+  document.getElementById('plate-summary').innerHTML=`
+    <div class="plate-summary-title">Detalle${exerciseMode?' · 🏃 Post-ejercicio':''}</div>
+    ${plate.map(item=>{
+      const cho=Math.round(getCarbs(item)*10)/10;
+      const qty=item.food.mode==='g'?item.grams+'g':item.qty+' porción(es)';
+      return `<div class="plate-food-line"><span>${item.food.name} (${qty})</span><span>${cho}g CHO</span></div>`;
+    }).join('')}
+    ${bolo>0?`<div class="plate-food-line" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.2);"><span>Bolo corrección (${currentGlucose} mg/dL)</span><span>${bolo} U</span></div>`:''}`;
+  document.getElementById('result-section').style.display='block';
+  setTimeout(()=>document.getElementById('result-section').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+function hideResult(){document.getElementById('result-section').style.display='none';}
+
+// ===================== REGISTER =====================
+async function registrarDosis(){
+  if(!pendingDose)return;
+  setSyncStatus('ing');
+  const now=new Date();
+  const entry={
+    id:Date.now(),
+    timestamp:now.toISOString(),
+    dateStr:now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}),
+    timeStr:now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}),
+    glucose:pendingDose.glucose,
+    totalCarbs:Math.round(pendingDose.totalCarbs),
+    mealDose:Math.round(pendingDose.mealDose*10)/10,
+    bolo:pendingDose.bolo,
+    dose:pendingDose.rounded,
+    exerciseMode:pendingDose.exerciseMode,
+    plate:pendingDose.plate,
+    glucose1h:null,glucose15h:null,
+    alarmTime1h:now.getTime()+60*60*1000,
+    alarmTime15h:now.getTime()+90*60*1000,
+  };
+  await sbInsert('gluco_log',{id:entry.id,data:entry});
+  log.unshift(entry);
+  setSyncStatus('ok');
+  setAlarms(entry);
+  plate=[];pendingDose=null;
+  renderPlate();hideResult();
+  document.getElementById('selected-card').style.display='none';
+  document.getElementById('totals-bar').style.display='none';
+  // Ask if applied dose differs
+  const applied = prompt(`✅ Dosis calculada: ${entry.dose} U\n\n¿Cuántas unidades aplicaste realmente?\n(Dejá vacío si aplicaste exactamente ${entry.dose} U)`);
+  if(applied !== null && applied.trim() !== '' && !isNaN(parseFloat(applied))){
+    entry.appliedDose = parseFloat(applied);
+    await sbUpdate('gluco_log',{data:entry},'id=eq.'+entry.id);
+  } else {
+    entry.appliedDose = entry.dose;
+  }
+  setSyncStatus('ok');
+  renderHistorial();
+  showTab('alarmas',document.querySelectorAll('.tab')[1]);
+}
+
+// ===================== ALARMS =====================
+async function requestNotifPermission(){
+  if(!('Notification'in window))return false;
+  if(Notification.permission==='granted')return true;
+  const result=await Notification.requestPermission();
+  return result==='granted';
+}
+
+function showNotification(title, body){
+  if(!('Notification'in window))return;
+  if(Notification.permission==='granted'){
+    try{
+      // Try SW notification first (works in background on Android)
+      if('serviceWorker'in navigator&&navigator.serviceWorker.controller){
+        navigator.serviceWorker.controller.postMessage({type:'SHOW_NOTIF',title,body});
+      } else {
+        new Notification(title,{body,icon:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0id2hpdGUiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDk3OGJkIiBzdHJva2Utd2lkdGg9IjE1Ii8+PC9zdmc+'});
+      }
+    }catch(e){console.log('Notif error:',e);}
+  }
+}
+
+function setAlarms(entry){
+  alarmTimers.forEach(t=>clearTimeout(t));alarmTimers=[];
+  const now=Date.now();
+  const schedule=[
+    {time:entry.alarmTime1h, label:'1 hora', key:'1h'},
+    {time:entry.alarmTime15h, label:'1:30hs', key:'15h'},
+  ];
+  schedule.forEach(({time,label,key})=>{
+    const delay=time-now;
+    if(delay>0){
+      alarmTimers.push(setTimeout(()=>{
+        showNotification('GlucoApp — Hora de medir',`⏰ ${label} post-dosis. Ingresá tu glucosa en la app.`);
+        renderAlarms();
+      },delay));
+    }
+  });
+  // Schedule via SW for background support
+  if('serviceWorker'in navigator&&navigator.serviceWorker.controller){
+    navigator.serviceWorker.controller.postMessage({
+      type:'SCHEDULE_ALARMS',
+      alarms:[
+        {time:entry.alarmTime1h, title:'GlucoApp — 1 hora', body:'Hora de medir tu glucosa post-dosis.'},
+        {time:entry.alarmTime15h, title:'GlucoApp — 1:30hs', body:'Hora de medir tu glucosa post-dosis.'},
+      ]
+    });
+  }
+  requestNotifPermission();
+  renderAlarms();
+}
+function checkActiveAlarms(){if(log.length>0){const l=log[0];if(!l.glucose1h||!l.glucose15h)setAlarms(l);}}
+function renderAlarms(){
+  const container=document.getElementById('alarms-container'),noAlarms=document.getElementById('no-alarms'),list=document.getElementById('alarm-list');
+  if(!log.length){container.style.display='none';noAlarms.style.display='block';return;}
+  const entry=log[0];
+  noAlarms.style.display='none';container.style.display='block';
+  const fmt=ts=>new Date(ts).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const now=Date.now();
+  const alarms=[
+    {label:'Glucosa a la hora',time:entry.alarmTime1h,done:entry.glucose1h!==null,value:entry.glucose1h,key:'1h',entryId:entry.id},
+    {label:'Glucosa a los 90 min',time:entry.alarmTime15h,done:entry.glucose15h!==null,value:entry.glucose15h,key:'15h',entryId:entry.id},
+  ];
+  list.innerHTML=alarms.map(a=>{
+    const isPast=now>=a.time;
+    const statusClass=a.done?'alarm-done':(isPast?'alarm-pending':'');
+    const statusText=a.done?`✓ ${a.value} mg/dL`:(isPast?'¡Medir ahora!':'Pendiente');
+    return `<div class="alarm-item">
+      <div><div style="font-weight:600;font-size:0.82rem;">${a.label}</div><div class="alarm-time">${fmt(a.time)}</div></div>
+      <div style="text-align:right"><div class="alarm-status ${statusClass}">${statusText}</div>
+      ${!a.done?`<div style="margin-top:3px;"><button onclick="openModal('${a.key}','${a.entryId}')" style="font-size:0.7rem;padding:3px 9px;background:var(--accent);color:white;border:none;border-radius:9px;cursor:pointer;">Ingresar</button></div>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== MODAL =====================
+function openModal(key,entryId){
+  const titles={'1h':'Glucosa a la hora post-dosis','15h':'Glucosa a los 90 min post-dosis'};
+  const descs={'1h':'Ingresá tu glucosa actual (60 min después de la inyección).','15h':'Ingresá tu glucosa actual (90 min después).'};
+  document.getElementById('modal-title').textContent=titles[key];
+  document.getElementById('modal-desc').textContent=descs[key];
+  document.getElementById('modal-input').value='';
+  document.getElementById('modal-overlay').classList.add('open');
+  modalCallback=(val)=>savePostGlucose(key,entryId,val);
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');modalCallback=null;}
+function saveModalValue(){
+  const val=parseInt(document.getElementById('modal-input').value);
+  if(!val||val<40||val>500){alert('Ingresá un valor válido (40-500 mg/dL)');return;}
+  if(modalCallback)modalCallback(val);closeModal();
+}
+async function savePostGlucose(key,entryId,val){
+  const entry=log.find(e=>e.id==entryId);if(!entry)return;
+  if(key==='1h')entry.glucose1h=val;
+  if(key==='15h')entry.glucose15h=val;
+  setSyncStatus('ing');
+  await sbUpdate('gluco_log',{data:entry},'id=eq.'+entryId);
+  setSyncStatus('ok');
+  renderAlarms();renderHistorial();renderAnalysis();
+}
+
+// ===================== HISTORIAL =====================
+let expandedItems = new Set();
+
+function toggleLogItem(id){
+  if(expandedItems.has(id)) expandedItems.delete(id);
+  else expandedItems.add(id);
+  renderHistorial();
+}
+function expandAll(){ log.forEach(e=>expandedItems.add(e.id)); renderHistorial(); }
+function collapseAll(){ expandedItems.clear(); renderHistorial(); }
+
+function renderHistorial(){
+  const empty=document.getElementById('historial-empty');
+  const list=document.getElementById('historial-list');
+  const actions=document.getElementById('historial-actions');
+  if(!log.length){empty.style.display='block';list.innerHTML='';if(actions)actions.style.display='none';return;}
+  empty.style.display='none';
+  if(actions)actions.style.display='block';
+
+  list.innerHTML=log.map(entry=>{
+    const isOpen=expandedItems.has(entry.id);
+    const foodNames=entry.plate.map(p=>p.name).join(', ');
+    const exBadge=entry.exerciseMode?`<span style="font-size:0.64rem;background:#e6f0ff;color:var(--accent);padding:1px 5px;border-radius:7px;">🏃</span>`:'';
+    const applied=entry.appliedDose!=null?entry.appliedDose:entry.dose;
+    const diffBadge=applied!==entry.dose
+      ? `<span class="log-applied-dose log-applied-different">Aplicó: ${applied}U ≠ ${entry.dose}U calculadas</span>`
+      : `<span class="log-applied-dose">Aplicó: ${applied}U</span>`;
+
+    // Glucose chips summary for header
+    const g1=entry.glucose1h!=null?`· 1h:${entry.glucose1h}`:'';
+    const g15=entry.glucose15h!=null?`· 90m:${entry.glucose15h}`:'';
+
+    const impact=getImpact(entry);
+    const itemClass = impact===null ? 'log-item-pending' : (impact.cls==='impact-good' ? 'log-item-ok' : 'log-item-bad');
+    const dotClass = impact===null ? 'dot-pending' : (impact.cls==='impact-good' ? 'dot-ok' : 'dot-bad');
+    const dotTitle = impact===null ? 'Sin datos post-dosis' : (impact.cls==='impact-good' ? 'Dosis correcta' : 'Fuera de rango');
+    return `<div class="log-item ${itemClass}">
+      <div class="log-item-header" onclick="toggleLogItem(${entry.id})">
+        <div class="log-header-left">
+          <div class="log-header-title"><span class="log-status-dot ${dotClass}" title="${dotTitle}"></span>${entry.dateStr} ${entry.timeStr} ${exBadge}</div>
+          <div class="log-header-sub">${entry.totalCarbs}g CHO · Pre:${entry.glucose} ${g1}${g15}</div>
+        </div>
+        <div class="log-header-right">
+          <div class="log-dose-big">${applied}<span class="log-dose-unit"> U</span></div>
+          <div class="log-chevron ${isOpen?'open':''}">▼</div>
+        </div>
+      </div>
+      <div class="log-body ${isOpen?'open':''}">
+
+        <!-- ALIMENTOS -->
+        <div class="log-section">
+          <div class="log-section-title">Alimentos</div>
+          <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">${entry.plate.map(p=>{
+            const qty=p.mode==='g'?p.grams+'g':p.qty+' porción(es)';
+            return `${p.name} (${qty}) — ${p.cho}g CHO`;
+          }).join('<br>')}</div>
+        </div>
+
+        <!-- GLUCOSAS -->
+        <div class="log-section">
+          <div class="log-section-title">Glucosas</div>
+          <div class="log-edit-row">
+            <span class="log-edit-label">Pre:</span>
+            <input class="log-edit-input" type="number" value="${entry.glucose}" id="edit-pre-${entry.id}">
+            <span class="log-edit-label">mg/dL</span>
+          </div>
+          <div class="log-edit-row">
+            <span class="log-edit-label">1 hora:</span>
+            <input class="log-edit-input" type="number" value="${entry.glucose1h!=null?entry.glucose1h:''}" id="edit-1h-${entry.id}" placeholder="—">
+            <span class="log-edit-label">mg/dL</span>
+          </div>
+          <div class="log-edit-row">
+            <span class="log-edit-label">90 min:</span>
+            <input class="log-edit-input" type="number" value="${entry.glucose15h!=null?entry.glucose15h:''}" id="edit-15h-${entry.id}" placeholder="—">
+            <span class="log-edit-label">mg/dL</span>
+          </div>
+        </div>
+
+        <!-- DOSIS -->
+        <div class="log-section">
+          <div class="log-section-title">Dosis</div>
+          <div class="log-edit-row">
+            <span class="log-edit-label">Calculada:</span>
+            <input class="log-edit-input" type="number" value="${entry.dose}" id="edit-dose-${entry.id}" step="0.5">
+            <span class="log-edit-label">U</span>
+          </div>
+          <div class="log-edit-row">
+            <span class="log-edit-label">Aplicada:</span>
+            <input class="log-edit-input" type="number" value="${applied}" id="edit-applied-${entry.id}" step="0.5">
+            <span class="log-edit-label">U</span>
+          </div>
+        </div>
+
+        <!-- FECHA Y HORA -->
+        <div class="log-section">
+          <div class="log-section-title">Fecha y hora</div>
+          <div class="log-edit-row">
+            <input class="log-edit-input" type="date" value="${entry.timestamp?entry.timestamp.slice(0,10):''}" id="edit-date-${entry.id}" style="width:130px;">
+            <input class="log-edit-input" type="time" value="${entry.timeStr||''}" id="edit-time-${entry.id}" style="width:90px;">
+          </div>
+        </div>
+
+        <!-- NOTAS -->
+        <div class="log-section">
+          <div class="log-section-title">Notas</div>
+          <textarea class="log-notes" id="edit-notes-${entry.id}" placeholder="Ej: comí más rápido de lo normal, tenía fiebre, día de estrés...">${entry.notes||''}</textarea>
+        </div>
+
+        <!-- IMPACT -->
+        ${impact?`<div class="log-impact ${impact.cls}" style="margin-top:10px;">${impact.text}</div>`:
+          `<div style="font-size:0.76rem;color:var(--muted);margin-top:10px;padding:7px 11px;background:var(--bg);border-radius:9px;">⏳ Sin glucosa post-dosis registrada aún.</div>`}
+
+        <!-- ACTIONS -->
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="log-save-btn" style="flex:1;padding:9px;font-size:0.8rem;" onclick="saveLogEdit(${entry.id})">Guardar cambios</button>
+          <button class="log-save-btn" style="background:#e63946;padding:9px;font-size:0.8rem;" onclick="deleteLogEntry(${entry.id})">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveLogEdit(entryId){
+  const entry=log.find(e=>e.id==entryId);if(!entry)return;
+  const pre=parseFloat(document.getElementById('edit-pre-'+entryId).value);
+  const g1h=document.getElementById('edit-1h-'+entryId).value;
+  const g15h=document.getElementById('edit-15h-'+entryId).value;
+  const dose=parseFloat(document.getElementById('edit-dose-'+entryId).value);
+  const applied=parseFloat(document.getElementById('edit-applied-'+entryId).value);
+  const notes=document.getElementById('edit-notes-'+entryId).value.trim();
+  const dateVal=document.getElementById('edit-date-'+entryId).value;
+  const timeVal=document.getElementById('edit-time-'+entryId).value;
+
+  if(!isNaN(pre)&&pre>0) entry.glucose=pre;
+  entry.glucose1h=g1h?parseFloat(g1h):null;
+  entry.glucose15h=g15h?parseFloat(g15h):null;
+  if(!isNaN(dose)&&dose>0) entry.dose=dose;
+  if(!isNaN(applied)&&applied>0) entry.appliedDose=applied;
+  entry.notes=notes;
+  if(dateVal){
+    const d=new Date(dateVal+'T'+(timeVal||'00:00'));
+    entry.dateStr=d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    entry.timeStr=timeVal||entry.timeStr;
+    entry.timestamp=d.toISOString();
+  }
+  setSyncStatus('ing');
+  await sbUpdate('gluco_log',{data:entry},'id=eq.'+entryId);
+  setSyncStatus('ok');
+  renderHistorial();renderAnalysis();
+  // Flash confirmation
+  const btn=document.querySelector(`[onclick="saveLogEdit(${entryId})"]`);
+  if(btn){btn.textContent='✓ Guardado';setTimeout(()=>{btn.textContent='Guardar cambios';},2000);}
+}
+
+async function deleteLogEntry(entryId){
+  if(!confirm('¿Eliminar este registro? No se puede deshacer.'))return;
+  setSyncStatus('ing');
+  await sbDelete('gluco_log','id=eq.'+entryId);
+  log=log.filter(e=>e.id!=entryId);
+  expandedItems.delete(entryId);
+  setSyncStatus('ok');
+  renderHistorial();renderAnalysis();
+}
+
+function downloadCSV(){
+  const headers=['Fecha','Hora','Glucosa pre (mg/dL)','CHO totales (g)','Dosis calculada (U)','Dosis aplicada (U)','Bolo corrección (U)','Glucosa 1h (mg/dL)','Glucosa 90min (mg/dL)','Ejercicio','Alimentos','Notas'];
+  const rows=log.map(e=>[
+    e.dateStr,
+    e.timeStr,
+    e.glucose,
+    e.totalCarbs,
+    e.dose,
+    e.appliedDose!=null?e.appliedDose:e.dose,
+    e.bolo||0,
+    e.glucose1h!=null?e.glucose1h:'',
+    e.glucose15h!=null?e.glucose15h:'',
+    e.exerciseMode?'Sí':'No',
+    '"'+e.plate.map(p=>p.name).join(', ')+'"',
+    '"'+(e.notes||'')+'"'
+  ]);
+  const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='glucoapp-historial-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function getImpact(entry){
+  if(entry.glucose15h===null&&entry.glucose1h===null)return null;
+  const post=entry.glucose15h||entry.glucose1h;
+  const mn=config.targetMin||80, mx=config.targetMax||140;
+  if(post>=mn&&post<=mx)return{cls:'impact-good',text:`✓ Dosis correcta. Post: ${post} mg/dL (rango objetivo: ${mn}–${mx})`};
+  if(post>mx)return{cls:'impact-high',text:`⬆ Glucosa alta post-dosis: ${post} mg/dL. Quedó por encima del rango (${mn}–${mx}). Dosis corta o más CHO de lo estimado.`};
+  return{cls:'impact-low',text:`⬇ Glucosa baja post-dosis: ${post} mg/dL. Quedó por debajo del rango (${mn}–${mx}). Dosis excesiva o menos CHO de lo estimado.`};
+}
+
+// ===================== ANALYSIS =====================
+function renderAnalysis(){
+  const complete=log.filter(e=>e.glucose15h!==null||e.glucose1h!==null);
+  const empty=document.getElementById('analysis-empty'),content=document.getElementById('analysis-content');
+  if(complete.length<3){empty.style.display='block';content.style.display='none';return;}
+  empty.style.display='none';content.style.display='block';
+  const avgCho=Math.round(complete.reduce((s,e)=>s+e.totalCarbs,0)/complete.length);
+  const avgDose=(complete.reduce((s,e)=>s+e.dose,0)/complete.length).toFixed(1);
+  const avgPre=Math.round(complete.reduce((s,e)=>s+e.glucose,0)/complete.length);
+  document.getElementById('theory-body').innerHTML=`
+    <div class="stat-row"><span class="stat-label">Ratio (IC)</span><span class="stat-value">1 U cada ${config.ic}g CHO</span></div>
+    <div class="stat-row"><span class="stat-label">FS normal / post-ejercicio</span><span class="stat-value">${config.cf} / ${config.cfEx||50} mg/dL</span></div>
+    <div class="stat-row"><span class="stat-label">Rango objetivo</span><span class="stat-value">${config.targetMin||80}–${config.targetMax||140} mg/dL</span></div>
+    <div class="stat-row"><span class="stat-label">Promedio CHO por comida</span><span class="stat-value">${avgCho}g</span></div>
+    <div class="stat-row"><span class="stat-label">Dosis promedio</span><span class="stat-value">${avgDose} U</span></div>
+    <div class="stat-row"><span class="stat-label">Registros analizados</span><span class="stat-value">${complete.length}</span></div>`;
+  const mn=config.targetMin||80,mx=config.targetMax||140;
+  const hits=complete.filter(e=>{const p=e.glucose15h||e.glucose1h;return p>=mn&&p<=mx;});
+  const highs=complete.filter(e=>{const p=e.glucose15h||e.glucose1h;return p>mx;});
+  const lows=complete.filter(e=>{const p=e.glucose15h||e.glucose1h;return p<mn;});
+  const hitRate=Math.round((hits.length/complete.length)*100);
+  const avgPost=Math.round(complete.reduce((s,e)=>s+(e.glucose15h||e.glucose1h),0)/complete.length);
+  document.getElementById('real-body').innerHTML=`
+    <div class="stat-row"><span class="stat-label">Dosis correctas (±20 mg/dL)</span><span class="stat-value" style="color:var(--accent)">${hitRate}% (${hits.length}/${complete.length})</span></div>
+    <div class="stat-row"><span class="stat-label">Glucosa post-dosis promedio</span><span class="stat-value">${avgPost} mg/dL</span></div>
+    <div class="stat-row"><span class="stat-label">Dosis corta (glucosa alta)</span><span class="stat-value" style="color:var(--high)">${highs.length} veces</span></div>
+    <div class="stat-row"><span class="stat-label">Dosis excesiva (glucosa baja)</span><span class="stat-value" style="color:var(--low)">${lows.length} veces</span></div>
+    <div class="stat-row"><span class="stat-label">Glucosa pre-comida promedio</span><span class="stat-value">${avgPre} mg/dL</span></div>`;
+  let rec='';
+  const highRate=highs.length/complete.length,lowRate=lows.length/complete.length;
+  if(hitRate>=70)rec=`✅ <strong>Tus parámetros están funcionando muy bien.</strong> El ${hitRate}% de las dosis quedan dentro del rango objetivo (${mn}–${mx} mg/dL).`;
+  else if(highRate>0.5){const s=Math.round(config.ic*0.85);rec=`⬆ <strong>La glucosa tiende a quedar por encima del rango (${mn}–${mx} mg/dL).</strong> Ratio actual: 1U cada ${config.ic}g. Los datos sugieren probar 1U cada ${s}g. <strong>Consultá con tu diabetóloga antes de cambiar.</strong>`;}
+  else if(lowRate>0.4){const s=Math.round(config.ic*1.15);rec=`⬇ <strong>La glucosa tiende a quedar por debajo del rango (${mn}–${mx} mg/dL).</strong> Ratio actual: 1U cada ${config.ic}g. Podrías necesitar 1U cada ${s}g. <strong>Consultá con tu diabetóloga antes de cambiar.</strong>`;}
+  else rec=`📊 Resultados variados. Con más registros el análisis será más preciso.`;
+  document.getElementById('recommendation-body').innerHTML=`<p style="line-height:1.8;">${rec}</p>
+    <div style="margin-top:10px;padding:9px;background:var(--bg);border-radius:9px;font-size:0.74rem;color:var(--muted);">📊 Basado en ${complete.length} registros. Se recomiendan al menos 10 para conclusiones sólidas.</div>`;
+}
+
+// ===================== CUSTOM FOODS =====================
+let currentChoMode = '100';
+
+function setChoMode(mode){
+  currentChoMode = mode;
+  const btn100 = document.getElementById('cho-mode-100');
+  const btnCalc = document.getElementById('cho-mode-calc');
+  const fields100 = document.getElementById('cho-mode-100-fields');
+  const fieldsCalc = document.getElementById('cho-mode-calc-fields');
+  if(mode === '100'){
+    btn100.style.background='var(--accent)';btn100.style.color='white';btn100.style.borderColor='var(--accent)';
+    btnCalc.style.background='white';btnCalc.style.color='var(--muted)';btnCalc.style.borderColor='var(--border)';
+    fields100.style.display='block';fieldsCalc.style.display='none';
+  } else {
+    btnCalc.style.background='var(--accent)';btnCalc.style.color='white';btnCalc.style.borderColor='var(--accent)';
+    btn100.style.background='white';btn100.style.color='var(--muted)';btn100.style.borderColor='var(--border)';
+    fields100.style.display='none';fieldsCalc.style.display='block';
+  }
+}
+
+function calcNewFoodCho(){
+  const w = parseFloat(document.getElementById('new-food-weight').value);
+  const c = parseFloat(document.getElementById('new-food-cho-total').value);
+  const res = document.getElementById('new-food-calc-result');
+  const input = document.getElementById('new-food-carbs');
+  if(!w || !c || w<=0 || c<0){ res.textContent=''; input.value=''; return; }
+  const per100 = Math.round((c/w)*1000)/10;
+  res.textContent = `= ${per100}g de CHO por cada 100g`;
+  input.value = per100;
+}
+
+let currentFoodType = 'g'; // 'g' or 'p'
+
+function setFoodType(type){
+  currentFoodType = type;
+  const btnG = document.getElementById('food-type-g');
+  const btnP = document.getElementById('food-type-p');
+  const fieldsG = document.getElementById('food-type-g-fields');
+  const fieldsP = document.getElementById('food-type-p-fields');
+  if(type === 'g'){
+    btnG.style.cssText='flex:1;padding:7px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:white;font-size:0.76rem;font-weight:600;cursor:pointer;';
+    btnP.style.cssText='flex:1;padding:7px;border-radius:8px;border:2px solid var(--border);background:white;color:var(--muted);font-size:0.76rem;font-weight:600;cursor:pointer;';
+    fieldsG.style.display='block'; fieldsP.style.display='none';
+  } else {
+    btnP.style.cssText='flex:1;padding:7px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:white;font-size:0.76rem;font-weight:600;cursor:pointer;';
+    btnG.style.cssText='flex:1;padding:7px;border-radius:8px;border:2px solid var(--border);background:white;color:var(--muted);font-size:0.76rem;font-weight:600;cursor:pointer;';
+    fieldsG.style.display='none'; fieldsP.style.display='block';
+  }
+}
+
+async function addCustomFood(){
+  const name=document.getElementById('new-food-name').value.trim();
+  const cat=document.getElementById('new-food-cat').value;
+  if(!name){alert('Ingresá el nombre del alimento.');return;}
+
+  let newFood;
+
+  if(currentFoodType === 'g'){
+    // Gram mode
+    if(currentChoMode==='calc') calcNewFoodCho();
+    const carbs=parseFloat(document.getElementById('new-food-carbs').value);
+    if(isNaN(carbs)||carbs<0){
+      alert(currentChoMode==='100'?'Ingresá los gramos de CHO por 100g.':'Ingresá el peso y CHO del paquete.');
+      return;
+    }
+    const portion=document.getElementById('new-food-portion-g').value.trim();
+    newFood={name,cat,mode:'g',portionDesc:portion||'Cantidad libre (gramos)',carbsPer100g:carbs,custom:true};
+  } else {
+    // Portion mode
+    const carbs=parseFloat(document.getElementById('new-food-carbs-p').value);
+    if(isNaN(carbs)||carbs<0){alert('Ingresá los gramos de CHO por porción.');return;}
+    const portion=document.getElementById('new-food-portion-p').value.trim();
+    newFood={name,cat,mode:'p',portionDesc:portion||'1 porción',carbsPerP:carbs,custom:true};
+  }
+
+  setSyncStatus('ing');
+  const ok=await sbInsert('gluco_custom_foods',{data:newFood});
+  if(ok){
+    customFoods.push(newFood);
+    const rows=await sbGet('gluco_custom_foods','order=created_at.desc&limit=1');
+    if(rows.length)customFoodDbIds[name]=rows[0].id;
+    setSyncStatus('ok');
+  } else {setSyncStatus('err');}
+
+  // Clear form
+  ['new-food-name','new-food-carbs','new-food-portion-g','new-food-carbs-p',
+   'new-food-portion-p','new-food-weight','new-food-cho-total'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const res=document.getElementById('new-food-calc-result');
+  if(res) res.textContent='';
+
+  renderCustomFoodsList();
+  const modeLabel=newFood.mode==='g'?`${newFood.carbsPer100g}g CHO/100g`:`${newFood.carbsPerP}g CHO/porción`;
+  alert(`✅ "${name}" guardado (${modeLabel}).`);
+}
+async function deleteCustomFood(i){
+  if(!confirm(`¿Eliminar "${customFoods[i].name}"?`))return;
+  const name=customFoods[i].name;
+  const dbId=customFoodDbIds[name];
+  setSyncStatus('ing');
+  if(dbId)await sbDelete('gluco_custom_foods','id=eq.'+dbId);
+  customFoods.splice(i,1);
+  setSyncStatus('ok');
+  renderCustomFoodsList();
+}
+function renderCustomFoodsList(){
+  const el=document.getElementById('custom-foods-list');
+  if(!customFoods.length){el.innerHTML='';return;}
+  el.innerHTML=`<div class="section-divider">Mis alimentos guardados</div>`+
+    customFoods.map((f,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:white;border-radius:9px;margin-bottom:6px;border:1px solid var(--border);">
+      <div><div style="font-size:0.83rem;font-weight:600;">${f.name} <span class="tag-custom">mío</span></div>
+      <div style="font-size:0.7rem;color:var(--muted);">${f.carbsPer100g}g CHO/100g · ${f.cat}</div></div>
+      <button onclick="deleteCustomFood(${i})" style="background:none;border:none;color:var(--low);cursor:pointer;font-size:0.9rem;">🗑️</button>
+    </div>`).join('');
+}
+
+// ===================== STORAGE =====================
+async function saveConfig(){
+  config.ic=parseFloat(document.getElementById('config-ic').value)||7;
+  config.cf=parseFloat(document.getElementById('config-cf').value)||30;
+  config.cfEx=parseFloat(document.getElementById('config-cf-ex').value)||50;
+  config.targetMin=parseFloat(document.getElementById('config-target-min').value)||80;
+  config.targetMax=parseFloat(document.getElementById('config-target-max').value)||140;
+  setSyncStatus('ing');
+  await sbUpsert('gluco_config',{id:'main',data:config,updated_at:new Date().toISOString()});
+  setSyncStatus('ok');
+  updateFsDisplay();
+  const s=document.getElementById('save-success');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),2500);
+}
+async function clearData(){
+  if(!confirm('¿Borrar registros? Esta acción no se puede deshacer.'))return;
+  setSyncStatus('ing');
+  await sbDelete('gluco_log','id=gte.0');
+  log=[];
+  setSyncStatus('ok');
+  renderHistorial();renderAnalysis();renderAlarms();
+  alert('✓ Registros borrados.');
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search-box')&&!e.target.closest('.search-results'))hideSearchResults();
+  if(e.target===document.getElementById('modal-overlay'))closeModal();
+});
+
+
+
+
+// ===================== AUTH =====================
+const AUTH_USER = 'badalu';
+const AUTH_PASS_HASH = 'f1632bc8fc32613c4a1f7e50d5c6e58686fa4e09eac1ec4398d2170802805d9a';
+const SESSION_KEY = 'glucoapp-session-v1';
+
+function hashStr(str){
+  // Simple but effective for client-side: use stored hash comparison
+  // We use SubtleCrypto for proper hashing
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))
+    .then(buf => Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join(''));
+}
+
+async function doLogin(){
+  const user = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  const hash = await hashStr(pass);
+  if(user === AUTH_USER && hash === AUTH_PASS_HASH){
+    localStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('login-overlay').style.display = 'none';
+    err.style.display = 'none';
+    init();
+  } else {
+    err.style.display = 'block';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+  }
+}
+
+function doLogout(){
+  if(confirm('¿Cerrar sesión?')){
+    localStorage.removeItem(SESSION_KEY);
+    location.reload();
+  }
+}
+
+function checkSession(){
+  if(localStorage.getItem(SESSION_KEY) === '1'){
+    document.getElementById('login-overlay').style.display = 'none';
+    return true;
+  }
+  return false;
+}
+
+// Allow Enter key on login form
+document.addEventListener('DOMContentLoaded', () => {
+  ['login-user','login-pass'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  });
+});
+
+// Auto-check session on load
+if(!checkSession()){ /* show login */ } else { init().catch(e=>{ console.error(e); skipLoading(); }); }
+
+// Clean up old libre credentials from localStorage
+['libre-email-enc','libre-pass-enc','libre-email-v1','libre-pass-v1','libre-server'].forEach(k=>localStorage.removeItem(k));
+
+// ===================== SERVICE WORKER =====================
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js')
+    .then(reg => {
+      console.log('GlucoApp SW registered ✓');
+      if('periodicSync' in reg){
+        reg.periodicSync.register('check-alarms',{minInterval:30*1000}).catch(()=>{});
+      }
+    })
+    .catch(e => console.log('SW registration failed:', e));
+}
+</script>
+</body>
+</html>
