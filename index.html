@@ -341,7 +341,7 @@ header p{font-size:0.7rem;opacity:0.75;margin-top:1px;}
   </div>
   <div class="totals-bar" id="totals-bar" style="display:none">
     <div class="total-item"><div class="total-label">Total CHO</div><div class="total-value" id="total-cho">0g</div></div>
-    <div class="total-item"><div class="total-label">Glucosa</div><div class="total-value" id="total-glucose">120</div></div>
+    <div class="total-item"><div class="total-label">Glucosa</div><div class="total-value" id="total-glucose">—</div></div>
     <div class="total-item"><div class="total-label">FS activo</div><div class="total-value" id="total-fs">30</div></div>
   </div>
   <button class="calc-btn" onclick="calcularDosis()">Calcular dosis</button>
@@ -710,6 +710,21 @@ function withTimeout(promise, ms){
   ]);
 }
 
+async function retryLoad(attempts=3){
+  for(let i=0;i<attempts;i++){
+    try{
+      await withTimeout(loadFromCloud(), 10000);
+      setSyncStatus('ok');
+      return true;
+    } catch(e){
+      console.warn(`Load attempt ${i+1} failed:`, e.message);
+      if(i < attempts-1) await new Promise(r=>setTimeout(r,2000));
+    }
+  }
+  setSyncStatus('err');
+  return false;
+}
+
 async function loadFromCloud(){
   // Sequential to avoid overwhelming nano plan connection limit
   const cfgRows = await sbGet('gluco_config','id=eq.main');
@@ -742,15 +757,9 @@ async function init(){
   // Show skip button after 3 seconds
   const skipTimer = setTimeout(()=>{ if(skipBtn) skipBtn.style.display='block'; }, 3000);
 
-  try {
-    if(loadingText) loadingText.textContent = 'Conectando...';
-    await withTimeout(loadFromCloud(), 8000);
-    setSyncStatus('ok');
-    if(loadingText) loadingText.textContent = 'Listo';
-  } catch(e) {
-    console.warn('Cloud load failed:', e.message);
-    setSyncStatus('err');
-  }
+  if(loadingText) loadingText.textContent = 'Conectando...';
+  const loaded = await retryLoad(3);
+  if(loadingText) loadingText.textContent = loaded ? 'Listo' : 'Sin conexión';
   clearTimeout(skipTimer);
 
   // Set UI values
@@ -786,8 +795,14 @@ function showTab(tab,el){
 // ===================== GLUCOSE =====================
 function updateGlucose(val){currentGlucose=parseInt(val);updateGlucoseDisplay(val);}
 function updateGlucoseFromInput(val){
-  if(!val||val===''){currentGlucose=120;return;}
-  const v=Math.min(400,Math.max(40,parseInt(val)||120));
+  if(!val||val===''){
+    currentGlucose=0;
+    const tg=document.getElementById('total-glucose');if(tg)tg.textContent='—';
+    const s=document.getElementById('glucose-status');if(s){s.textContent='';s.className='glucose-status';}
+    const input=document.getElementById('glucose-direct');if(input)input.style.borderColor='var(--border)';
+    return;
+  }
+  const v=Math.min(400,Math.max(40,parseInt(val)||40));
   currentGlucose=v;
   updateGlucoseDisplay(v);
   const tg=document.getElementById('total-glucose');if(tg)tg.textContent=v;
@@ -929,6 +944,8 @@ function renderPlate(){
     }
   }).join('');
   document.getElementById('total-cho').textContent=Math.round(total*10)/10+'g';
+  const tg=document.getElementById('total-glucose');
+  if(tg)tg.textContent=currentGlucose||'—';
   updateFsDisplay();
 }
 function updateGrams(i,val){plate[i].grams=Math.max(1,parseFloat(val)||1);document.getElementById('cho-'+i).textContent=Math.round(getCarbs(plate[i])*10)/10+'g CHO';updateTotalCho();hideResult();}
