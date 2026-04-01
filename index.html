@@ -785,7 +785,13 @@ function showTab(tab,el){
 
 // ===================== GLUCOSE =====================
 function updateGlucose(val){currentGlucose=parseInt(val);updateGlucoseDisplay(val);}
-// updateGlucoseFromInput handled above
+function updateGlucoseFromInput(val){
+  if(!val||val===''){currentGlucose=120;return;}
+  const v=Math.min(400,Math.max(40,parseInt(val)||120));
+  currentGlucose=v;
+  updateGlucoseDisplay(v);
+  const tg=document.getElementById('total-glucose');if(tg)tg.textContent=v;
+}
 function updateGlucoseDisplay(val){
   const d=document.getElementById('glucose-display'),s=document.getElementById('glucose-status'),tg=document.getElementById('total-glucose');
   d.textContent=val;if(tg)tg.textContent=val;
@@ -1057,33 +1063,40 @@ function showNotification(title, body){
   }
 }
 
-function setAlarms(entry){
+async function setAlarms(entry){
   alarmTimers.forEach(t=>clearTimeout(t));alarmTimers=[];
   const now=Date.now();
-  const schedule=[
-    {time:entry.alarmTime1h, label:'1 hora', key:'1h'},
-    {time:entry.alarmTime15h, label:'1:30hs', key:'15h'},
+
+  const granted=await requestNotifPermission();
+  console.log('Notification permission:', granted);
+
+  const alarmData=[
+    {time:entry.alarmTime1h, title:'GlucoApp — 1 hora', body:'Hora de medir tu glucosa post-dosis.'},
+    {time:entry.alarmTime15h, title:'GlucoApp — 1:30hs', body:'Hora de medir tu glucosa post-dosis.'},
   ];
-  schedule.forEach(({time,label,key})=>{
+
+  // In-app timers (when app is open)
+  alarmData.forEach(({time,title,body})=>{
     const delay=time-now;
     if(delay>0){
       alarmTimers.push(setTimeout(()=>{
-        showNotification('GlucoApp — Hora de medir',`⏰ ${label} post-dosis. Ingresá tu glucosa en la app.`);
+        showNotification(title,body);
         renderAlarms();
       },delay));
     }
   });
-  // Schedule via SW for background support
-  if('serviceWorker'in navigator&&navigator.serviceWorker.controller){
-    navigator.serviceWorker.controller.postMessage({
-      type:'SCHEDULE_ALARMS',
-      alarms:[
-        {time:entry.alarmTime1h, title:'GlucoApp — 1 hora', body:'Hora de medir tu glucosa post-dosis.'},
-        {time:entry.alarmTime15h, title:'GlucoApp — 1:30hs', body:'Hora de medir tu glucosa post-dosis.'},
-      ]
-    });
+
+  // Send to SW for background notifications
+  if('serviceWorker'in navigator){
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      if(reg.active){
+        reg.active.postMessage({type:'SCHEDULE_ALARMS',alarms:alarmData});
+        console.log('Alarms sent to SW successfully');
+      }
+    }catch(e){console.log('SW alarm schedule error:',e);}
   }
-  requestNotifPermission();
+
   renderAlarms();
 }
 function checkActiveAlarms(){if(log.length>0){const l=log[0];if(!l.glucose1h||!l.glucose15h)setAlarms(l);}}
@@ -1580,11 +1593,13 @@ if(!checkSession()){ /* show login */ } else { init().catch(e=>{ console.error(e
 
 // ===================== SERVICE WORKER =====================
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/sw.js')
+  // Use relative path — works on any domain (Netlify, GitHub Pages, etc)
+  navigator.serviceWorker.register('./sw.js', {scope: './'})
     .then(reg => {
-      console.log('GlucoApp SW registered ✓');
-      if('periodicSync' in reg){
-        reg.periodicSync.register('check-alarms',{minInterval:30*1000}).catch(()=>{});
+      console.log('GlucoApp SW registered ✓', reg.scope);
+      // Request notification permission proactively
+      if('Notification' in window && Notification.permission === 'default'){
+        Notification.requestPermission().then(p => console.log('Notif permission:', p));
       }
     })
     .catch(e => console.log('SW registration failed:', e));
