@@ -990,8 +990,13 @@ function calcFromLabel(i){
 
 // ===================== CALCULATE =====================
 function calcularDosis(){
-  if(!config.ic||!config.cf){alert('⚙️ Configurá tus parámetros primero.');return;}
-  if(!plate.length){alert('🍽️ Agregá al menos un alimento.');return;}
+  if(!config.ic||!config.cf){alert('Configurá tus parámetros primero en Config.');return;}
+  if(!plate.length){alert('Agregá al menos un alimento al plato.');return;}
+  // Always read glucose directly from DOM — never trust cached variable
+  const glucoseField=document.getElementById('glucose-direct');
+  const glucoseVal=parseInt(glucoseField?.value||'0');
+  if(!glucoseVal||glucoseVal<40){alert('Ingresá tu glucosa actual antes de calcular.');if(glucoseField)glucoseField.focus();return;}
+  currentGlucose=glucoseVal;
   const totalCarbs=plate.reduce((s,item)=>s+getCarbs(item),0);
   const mealDose=totalCarbs/config.ic;
   const bolo=getBoloUnits(currentGlucose);
